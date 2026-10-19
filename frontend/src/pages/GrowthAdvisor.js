@@ -1,3 +1,4 @@
+import { authFetch } from '../config/auth';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,7 +14,7 @@ const pointTone={risk:['#fff1ea','#a33824'], action:['#eff5ff','#224c88'], oppor
 async function request(path, options={}) {
   let response;
   try {
-    response=await fetch(`${getApiBase()}/api/growth/advisor${path}`,{
+    response=await authFetch(`/api/growth/advisor${path}`,{
       ...options,
       headers:{'Content-Type':'application/json',...(options.headers||{})}
     });
@@ -102,7 +103,7 @@ export default function GrowthAdvisor({userId}) {
       <p>The other Growth Tools modules can continue working, but the SmartGrowth backend endpoint must be available to load recommendations.</p>
       <p><strong>Step 1:</strong> Close old SmartGrowth backend terminals and confirm nothing is using port 8000.</p>
       <p><strong>Step 2:</strong> From this SmartGrowth project's <code>backend</code> folder, run <code>python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload</code>.</p>
-      <p><strong>Step 3:</strong> Open <a href={`${getApiBase()}/api/growth/advisor/demo`} target="_blank" rel="noreferrer">test SmartGrowth API</a>. It should return JSON, not "Not Found". Then press <strong>Refresh advice</strong>.</p>
+      <p><strong>Step 3:</strong> Open the <strong>Refresh advice</strong> button after checking the server connection. Do not open private API links outside your session. Then press <strong>Refresh advice</strong>.</p>
     </> : <><h3>Loading your advisor…</h3><p>Connecting to your local SmartGrowth backend on port 8000.</p></>}</div> : <>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
         {[

@@ -1,58 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter, HashRouter, Navigate, Route, Routes, Link, useLocation } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
+import React, {useCallback, useEffect, useState} from 'react';
+import {BrowserRouter, HashRouter, Navigate, Route, Routes, Link, useLocation} from 'react-router-dom';
+import {Capacitor} from '@capacitor/core';
 import Home from './pages/SmartGrowthHome';
 import BusinessJourney from './pages/BusinessJourney';
 import GrowthWorkspace from './pages/GrowthWorkspace';
+import AccountPage from './pages/AccountPage';
+import AuthEntry from './pages/AuthEntry';
+import {getSession, saveSession, clearSession, authFetch} from './config/auth';
 import './styles/smartgrowth.css';
 
 const Router = Capacitor.isNativePlatform() ? HashRouter : BrowserRouter;
-const demoUser = {username:'demo', displayName:'Entrepreneur'};
 const navigation = [
-  {to:'/', icon:'⌂', label:'Home'},
+  {to:'/',icon:'⌂',label:'Home'},
   {to:'/journey',icon:'◇',label:'Journey'},
   {to:'/growth-workspace?tab=bookkeeping',icon:'▤',label:'Money'},
   {to:'/growth-workspace?tab=passport',icon:'◈',label:'Passport'},
-  {to:'/growth-workspace?tab=advisor',icon:'✦',label:'Advisor'},
+  {to:'/account',icon:'♙',label:'Account'},
 ];
 
 function AppShell({user,onLogout}) {
   const location=useLocation();
-  const selected = location.pathname === '/growth-workspace'
-    ? new URLSearchParams(location.search).get('tab')
-    : '';
+  const selected=location.pathname==='/growth-workspace'?new URLSearchParams(location.search).get('tab'):'';
   return <div className="sg-app">
     <header className="sg-header"><div className="sg-topwrap">
-      <Link className="sg-brand" to="/" aria-label="SmartGrowth home"><span className="sg-logo">↗</span><span>Smart<span className="sg-brand-strong">Growth</span><small>by Four Horsemen Tech</small></span></Link>
-      <nav className="sg-desktopnav" aria-label="Main navigation"><Link to="/">Overview</Link><Link to="/journey">My Journey</Link><Link to="/growth-workspace?tab=bookkeeping">Growth Tools</Link><Link to="/growth-workspace?tab=advisor">Advisor</Link></nav>
-      <div className="sg-topright"><span className="sg-demo-pill">DEMO</span><button type="button" className="sg-logout" onClick={onLogout}>Exit demo</button></div>
+      <Link className="sg-brand" to="/"><span className="sg-logo">↗</span><span>Smart<span className="sg-brand-strong">Growth</span><small>by Four Horsemen Tech</small></span></Link>
+      <nav className="sg-desktopnav"><Link to="/">Overview</Link><Link to="/journey">My Journey</Link><Link to="/growth-workspace?tab=bookkeeping">Growth Tools</Link><Link to="/growth-workspace?tab=advisor">Advisor</Link><Link to="/account">My Account</Link></nav>
+      <div className="sg-topright"><span className="sg-demo-pill">LOCAL PILOT</span><Link className="sg-logout" to="/account">{user.display_name?.split(' ')[0]||'Account'} ↗</Link></div>
     </div></header>
     <Routes>
-      <Route path="/" element={<Home user={user} />} />
-      <Route path="/journey" element={<BusinessJourney user={user} />} />
+      <Route path="/" element={<Home user={user}/>}/>
+      <Route path="/journey" element={<BusinessJourney user={user}/>}/>
       <Route path="/business-journey" element={<Navigate to="/journey" replace/>}/>
-      <Route path="/growth-workspace" element={<GrowthWorkspace user={user} />} />
+      <Route path="/growth-workspace" element={<GrowthWorkspace user={user}/>}/>
       <Route path="/advisor" element={<Navigate to="/growth-workspace?tab=advisor" replace/>}/>
       <Route path="/profile" element={<Navigate to="/growth-workspace?tab=registration" replace/>}/>
-      <Route path="*" element={<main className="sg-notfound"><h1>That page isn't in SmartGrowth</h1><p>The former SmartFund platform is separate from this business-growth app.</p><Link className="sg-action" to="/journey">Go to My Journey →</Link></main>}/>
+      <Route path="/account" element={<AccountPage user={user} onLogout={onLogout}/>}/>
+      <Route path="*" element={<main className="sg-notfound"><h1>Page not found</h1><Link className="sg-action" to="/journey">Go to My Journey →</Link></main>}/>
     </Routes>
     <nav className="sg-bottomnav" aria-label="Mobile main navigation">{navigation.map(item=>{
-      const [pathname,query] = item.to.split('?');
-      const samePage = pathname===location.pathname;
-      const active = query ? samePage && selected===new URLSearchParams(query).get('tab') : samePage;
-      return <Link key={item.label} to={item.to} aria-current={active?'page':undefined} className={active?'active':''}><span className="sg-navicon" aria-hidden="true">{item.icon}</span><span>{item.label}</span></Link>;
+      const [pathname,query]=item.to.split('?');
+      const samePage=pathname===location.pathname;
+      const active=query?samePage&&selected===new URLSearchParams(query).get('tab'):samePage;
+      return <Link key={item.label} to={item.to} aria-current={active?'page':undefined} className={active?'active':''}><span className="sg-navicon">{item.icon}</span><span>{item.label}</span></Link>;
     })}</nav>
-    <footer className="sg-footer">SmartGrowth · Four Horsemen Tech · Hackathon demo. Self-reported information; no real money transfers, registrations or verified opportunities.</footer>
+    <footer className="sg-footer">SmartGrowth · Four Horsemen Tech · Local pilot. Registration and payments are not independently verified.</footer>
   </div>;
 }
-function DemoEntry({onEnter}) {
-  return <div className="sg-welcome-wrap"><div className="sg-welcome-art"><div className="sg-welcome-brand"><span className="sg-logo">↗</span>SmartGrowth</div><div className="sg-welcome-kicker">FOUR HORSEMEN TECH PRESENTS</div><h1>Build your business.<br/><em>One step at a time.</em></h1><p>Your guided companion for keeping records, improving readiness, discovering customers and making your next move.</p><div className="sg-welcome-path"><span>01 · Start</span><span>02 · Manage</span><span>03 · Grow</span></div></div>
-  <div className="sg-welcome-card"><div className="sg-welcome-illustration">✦</div><span className="sg-chip">Mobile-first · Android · iOS · Web</span><h2>Welcome to your growth journey</h2><p>Explore the working entrepreneur demo using fictional or test records.</p><button type="button" className="sg-action sg-enter" onClick={onEnter}>Explore SmartGrowth <span>→</span></button><p className="sg-safe">No account or password required in this local demo. All sessions use one shared <code>demo</code> workspace; do not enter sensitive information.</p></div></div>;
-}
-export default function App(){
-  const [loggedIn,setLoggedIn]=useState(()=>{try{return localStorage.getItem('smartgrowth_demo_session')==='1';}catch{return false;}});
-  useEffect(()=>{document.title='SmartGrowth — Your Business Journey';},[]);
-  const enter=()=>{try{localStorage.setItem('smartgrowth_demo_session','1');}catch{} setLoggedIn(true);};
-  const leave=()=>{try{localStorage.removeItem('smartgrowth_demo_session');}catch{} setLoggedIn(false);};
-  return <Router>{loggedIn?<AppShell user={demoUser} onLogout={leave}/>:<DemoEntry onEnter={enter}/>}</Router>;
+
+export default function App() {
+  const [session,setSession]=useState(getSession);
+  const [restoring,setRestoring]=useState(!!getSession());
+  const logout=useCallback(async()=>{
+    try {if(getSession()) await authFetch('/api/auth/logout',{method:'POST'});} catch (_) { /* local logout always works */ }
+    clearSession();setSession(null);
+  },[]);
+  useEffect(()=>{
+    document.title='SmartGrowth — Your Business Journey';
+    const expired=()=>{clearSession();setSession(null);setRestoring(false);};
+    window.addEventListener('smartgrowth-session-expired',expired);
+    return ()=>window.removeEventListener('smartgrowth-session-expired',expired);
+  },[]);
+  useEffect(()=>{
+    const saved=getSession();
+    if(!saved){setRestoring(false);return;}
+    let live=true;
+    authFetch('/api/auth/me',{cache:'no-store'}).then(async response=>{
+      if(!response.ok)throw Error('Your account session has expired');
+      const {account}=await response.json();
+      if(live){const next={...saved,account};saveSession(next);setSession(next);}
+    }).catch(()=>{if(live){clearSession();setSession(null);}}).finally(()=>{if(live)setRestoring(false);});
+    return ()=>{live=false;};
+  },[]);
+  const signedIn=received=>{saveSession(received);setSession(received);setRestoring(false);};
+  if(restoring)return <main className="sg-loading"><span className="sg-logo">↗</span><h2>Opening SmartGrowth…</h2><p>Restoring your account.</p></main>;
+  return <Router>{session?.account?<AppShell key={session.account.user_id} user={session.account} onLogout={logout}/>:<AuthEntry onSignedIn={signedIn}/>}</Router>;
 }

@@ -1,4 +1,4 @@
-"""Hackathon demo growth tools. User IDs are client supplied: NOT production authentication."""
+"""Hackathon demo growth tools. Access controlled by the authenticated API dependency in main.py."""
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Literal

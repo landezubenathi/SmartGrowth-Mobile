@@ -1,3 +1,4 @@
+import { authFetch } from '../config/auth';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import GrowthAdvisor from './GrowthAdvisor';
@@ -7,7 +8,7 @@ const panel={background:'#fff',border:'1px solid #e0e7ef',borderRadius:16,paddin
 const input={padding:11,border:'1px solid #b8c7d9',borderRadius:8,width:'100%',boxSizing:'border-box'};
 const btn={padding:'11px 18px',border:0,borderRadius:8,background:'#123d72',color:'white',fontWeight:700,cursor:'pointer'};
 const money=n=>`R ${Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-async function api(path,options){const response=await fetch(`${getApiBase()}/api/growth${path}`,{...options,headers:{'Content-Type':'application/json',...(options?.headers||{})}}); const body=await response.json();if(!response.ok)throw Error(typeof body.detail==='string'?body.detail:'Request failed');return body;}
+async function api(path,options){const response=await authFetch(`/api/growth${path}`,{...options,headers:{'Content-Type':'application/json',...(options?.headers||{})}}); const body=await response.json();if(!response.ok)throw Error(typeof body.detail==='string'?body.detail:'Request failed');return body;}
 export default function GrowthWorkspace({user}) {
   const username=user?.username||user?.email||'demo';
   const [params, setParams] = useSearchParams();

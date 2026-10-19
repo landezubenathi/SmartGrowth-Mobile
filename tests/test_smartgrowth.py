@@ -8,18 +8,32 @@ from fastapi.testclient import TestClient
 BACKEND = Path(__file__).resolve().parents[1] / 'backend'
 sys.path.insert(0, str(BACKEND))
 import growth_modules
+import auth
 from main import app
 
 class SmartGrowthTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.before = growth_modules.DB
-        growth_modules.DB = Path(self.temp.name)/'test.sqlite3'
-        self.client = TestClient(app)
-        self.user = 'demo'
+        self.before_auth = auth.DB
+        test_db = Path(self.temp.name)/'test.sqlite3'
+        growth_modules.DB = test_db
+        auth.DB = test_db
+        self.before_env = __import__('os').environ.get('SMARTGROWTH_SEED_DEMO')
+        __import__('os').environ['SMARTGROWTH_SEED_DEMO'] = '1'
+        self.context = TestClient(app)
+        self.client = self.context.__enter__()
+        response = self.client.post('/api/auth/login', json={'email':'demo@smartgrowth.local','password':'SmartDemo!2026'})
+        assert response.status_code == 200, response.text
+        self.client.headers.update({'Authorization': 'Bearer '+response.json()['token']})
+        self.user = 'demo' 
 
     def tearDown(self):
+        self.context.__exit__(None,None,None)
         growth_modules.DB = self.before
+        auth.DB = self.before_auth
+        if self.before_env is None: __import__('os').environ.pop('SMARTGROWTH_SEED_DEMO',None)
+        else: __import__('os').environ['SMARTGROWTH_SEED_DEMO'] = self.before_env
         self.temp.cleanup()
 
     def test_independent_backend_no_old_funding_portal(self):
@@ -27,7 +41,7 @@ class SmartGrowthTests(unittest.TestCase):
         self.assertEqual(c.get('/health').json()['application'],'SmartGrowth')
         self.assertEqual(c.get('/api/growth/advisor/health').status_code, 200)
         self.assertEqual(c.get('/api/match-funding').status_code, 404)
-        self.assertEqual(c.get('/api/auth/login').status_code, 404)
+        self.assertEqual(c.get('/api/auth/login').status_code, 405)
 
     def test_journey_and_passport_auto_update(self):
         c = self.client

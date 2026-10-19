@@ -1,3 +1,4 @@
+import { authFetch } from '../config/auth';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getApiBase, saveApiBase } from '../config/api';
@@ -19,7 +20,7 @@ function labelForError(error, apiUrl) {
 export default function BusinessJourney({ user }) {
   const username = user?.username || user?.email || 'demo';
   const navigate = useNavigate();
-  const [goalId, setGoalId] = useState(() => window.localStorage.getItem('smartgrowth_journey_goal') || 'start');
+  const [goalId, setGoalId] = useState(() => window.localStorage.getItem('smartgrowth_journey_goal_'+username) || 'start');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,7 +33,7 @@ export default function BusinessJourney({ user }) {
     setLoading(true); setError('');
     const url = getApiBase(); setApiUrl(url);
     try {
-      const response = await fetch(`${url}/api/growth/advisor/${encodeURIComponent(username)}`, { cache: 'no-store' });
+      const response = await authFetch(`/api/growth/advisor/${encodeURIComponent(username)}`, { cache: 'no-store' });
       if (!response.ok) { const err = new Error(`HTTP ${response.status}`); err.status = response.status; throw err; }
       const json = await response.json();
       if (!json.plan || !Array.isArray(json.plan.tasks)) throw new Error('Invalid Advisor response');
@@ -42,7 +43,7 @@ export default function BusinessJourney({ user }) {
   }, [username]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { const handler = () => refresh(); window.addEventListener('focus', handler); return () => window.removeEventListener('focus', handler); }, [refresh]);
-  function chooseGoal(id) { setGoalId(id); window.localStorage.setItem('smartgrowth_journey_goal', id); }
+  function chooseGoal(id) { setGoalId(id); window.localStorage.setItem('smartgrowth_journey_goal_'+username, id); }
   const tasks = useMemo(() => goal.tasks.map(id => data?.plan?.tasks?.find(task => task.id === id)).filter(Boolean), [goal, data]);
   const done = tasks.filter(task => task.completed).length;
   const percentage = tasks.length ? Math.round(100 * done / tasks.length) : 0;

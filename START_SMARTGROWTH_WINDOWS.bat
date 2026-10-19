@@ -3,7 +3,9 @@ setlocal
 cd /d "%~dp0"
 where py >nul 2>nul
 if %errorlevel%==0 (set "PY=py -3") else (set "PY=python")
-echo [SmartGrowth] Preparing FastAPI demo backend...
+set "SMARTGROWTH_SEED_DEMO=1"
+echo [SmartGrowth] Local test accounts enabled. Never enable these on a public server.
+echo [SmartGrowth] Preparing FastAPI backend...
 %PY% -m pip install -r backend\requirements.txt
 if errorlevel 1 (echo Python dependency installation failed.&pause&exit /b 1)
 echo [SmartGrowth] Preparing React frontend...
@@ -21,4 +23,5 @@ start "SmartGrowth API - port 8000" /D "%~dp0backend" cmd /k %PY% -m uvicorn mai
 start "SmartGrowth React - port 3501" /D "%~dp0frontend" cmd /k npm start
 echo.
 echo Once both servers start, open http://localhost:3501
+echo Test login: demo@smartgrowth.local / SmartDemo!2026
 pause

@@ -1,8 +1,8 @@
 """SmartGrowth business workflow — local demonstration features only.
 
 Registration statuses are self-declared, payments are SIMULATED, procurement
-opportunities and initial market listings are FICTIONAL. API user_id is NOT
-an authenticated identity. Never expose these endpoints to the public internet.
+opportunities and initial market listings are FICTIONAL. API account IDs are checked against an authenticated session in main.py.
+Do not expose this local pilot to the public internet without further hardening.
 """
 from datetime import date, datetime, timezone
 from decimal import Decimal

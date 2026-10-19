@@ -2,7 +2,7 @@
 
 No generative model is used in this demo: recommendations are traceable rules
 built from user-provided demo records. All outputs are educational only.
-User IDs come from the client and are NOT authenticated. Local development only.
+Account ownership is checked by the API dependency in main.py. Local pilot only.
 """
 from datetime import datetime, timezone, date
 from typing import Literal

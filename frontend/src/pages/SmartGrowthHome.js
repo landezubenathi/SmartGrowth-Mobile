@@ -1,3 +1,4 @@
+import { authFetch } from '../config/auth';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getApiBase } from '../config/api';
@@ -14,14 +15,14 @@ export default function SmartGrowthHome({user}){
   const [data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(true);
   const refresh=useCallback(async()=>{
     setBusy(true);setError('');
-    try {const response=await fetch(`${getApiBase()}/api/growth/advisor/${encodeURIComponent(user.username)}`,{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);setData(await response.json());}
+    try {const response=await authFetch(`/api/growth/advisor/${encodeURIComponent(user.username)}`,{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);setData(await response.json());}
     catch(e){setError('Growth data unavailable ('+e.message+'). Check the backend connection under My Journey.');}
     finally{setBusy(false);}
   },[user.username]);
   useEffect(()=>{refresh();},[refresh]);
   const p=data?.plan;const s=data?.snapshot;const next=(data?.priority_actions||[]).find(t=>!t.completed);
   return <main className="sg-main">
-    <section className="sg-homehero"><div className="sg-homeherotext"><span className="sg-overline">YOUR BUSINESS COMPANION</span><h1>Good things grow<br/>from <em>small steps.</em></h1><p>Everything you need to build a stronger business, organised around your journey—not complicated dashboards.</p><div className="sg-heroactions"><Link to="/journey" className="sg-action">Continue my journey <span>→</span></Link><Link to="/growth-workspace?tab=bookkeeping" className="sg-outline-action">Record a sale</Link></div></div><div className="sg-herodeco" aria-hidden="true"><div className="sg-circle one">✦</div><div className="sg-circle two">↗</div><span>GROW<br/>WITH<br/>PURPOSE</span></div></section>
+    <section className="sg-homehero"><div className="sg-homeherotext"><span className="sg-overline">YOUR BUSINESS COMPANION</span><h1>Welcome back, {user.display_name?.split(' ')[0]||'entrepreneur'}.<br/><em>Keep growing.</em></h1><p>Everything you need to build a stronger business, organised around your journey—not complicated dashboards.</p><div className="sg-heroactions"><Link to="/journey" className="sg-action">Continue my journey <span>→</span></Link><Link to="/growth-workspace?tab=bookkeeping" className="sg-outline-action">Record a sale</Link></div></div><div className="sg-herodeco" aria-hidden="true"><div className="sg-circle one">✦</div><div className="sg-circle two">↗</div><span>GROW<br/>WITH<br/>PURPOSE</span></div></section>
     <div className="sg-sec-heading"><div><span className="sg-mini">YOUR PROGRESS</span><h2>Where your business stands</h2></div><button onClick={refresh} className="sg-textbutton" disabled={busy}>{busy?'Updating…':'↻ Refresh'}</button></div>
     {error&&<div className="sg-error" role="alert">{error} <Link to="/journey">Check connection →</Link></div>}
     <section className="sg-metricrow" aria-label="Business overview">

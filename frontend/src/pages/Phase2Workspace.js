@@ -1,3 +1,4 @@
+import { authFetch } from '../config/auth';
 import React, {useCallback, useEffect, useState} from 'react';
 
 import { getApiBase } from '../config/api';
@@ -13,7 +14,7 @@ const col={display:'grid',gap:12};
 
 async function call(path, options={}){
   let response;
-  try { response=await fetch(`${getApiBase()}/api/growth${path}`,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}}); }
+  try { response=await authFetch(`/api/growth${path}`,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}}); }
   catch(e){throw Error(`Cannot connect to the configured SmartGrowth backend (${e.message}).`);}
   let data;
   try {data=await response.json();} catch(e){throw Error('Unexpected response from backend. Check the FastAPI terminal.');}
