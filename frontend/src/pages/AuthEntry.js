@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {credentialsRequest} from '../config/auth';
 import {getApiBase, saveApiBase} from '../config/api';
 
-export default function AuthEntry({onSignedIn}) {
+export default function AuthEntry({onSignedIn,onStandaloneStart}) {
   const [mode,setMode] = useState('login');
   const [form,setForm] = useState({display_name:'',email:'',password:'',confirm:''});
   const [busy,setBusy] = useState(false);
@@ -29,7 +29,9 @@ export default function AuthEntry({onSignedIn}) {
       <div className="sg-welcome-path"><span>01 · Start</span><span>02 · Manage</span><span>03 · Grow</span></div>
     </section>
     <section className="sg-welcome-card sg-auth-card">
-      <span className="sg-chip">Your business. Your account.</span>
+      <span className="sg-chip">Standalone Android · iOS · Web</span>
+      <div className="sg-offline-callout"><strong>Run SmartGrowth without a server</strong><p>Start immediately with example businesses, or create your own. Bookkeeping, invoices, Passport, Journey and fraud screening run on this device—even without Wi-Fi.</p><button className="sg-offline-start" type="button" onClick={onStandaloneStart}>Open SmartGrowth offline →</button><small>Local demo records are not secured with a password or synced to your account.</small></div>
+      <div className="sg-online-separator">OR · USE A HOSTED ACCOUNT</div>
       <h2>{mode==='register'?'Create your account':'Welcome back'}</h2>
       <p>{mode==='register'?'Create a separate workspace for your business.':'Sign in to continue your business journey.'}</p>
       <form onSubmit={submit} className="sg-auth-form">

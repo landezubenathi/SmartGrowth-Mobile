@@ -6,6 +6,7 @@ import BusinessJourney from './pages/BusinessJourney';
 import GrowthWorkspace from './pages/GrowthWorkspace';
 import AccountPage from './pages/AccountPage';
 import AuthEntry from './pages/AuthEntry';
+import StandaloneApp from './features/standalone/StandaloneApp';
 import {getSession, saveSession, clearSession, authFetch} from './config/auth';
 import './styles/smartgrowth.css';
 
@@ -62,7 +63,7 @@ export default function App() {
   },[]);
   useEffect(()=>{
     const saved=getSession();
-    if(!saved){setRestoring(false);return;}
+    if(!saved || saved.mode==='standalone'){setRestoring(false);return;}
     let live=true;
     authFetch('/api/auth/me',{cache:'no-store'}).then(async response=>{
       if(!response.ok)throw Error('Your account session has expired');
@@ -72,6 +73,8 @@ export default function App() {
     return ()=>{live=false;};
   },[]);
   const signedIn=received=>{saveSession(received);setSession(received);setRestoring(false);};
+  const startStandalone=()=>signedIn({mode:'standalone',token:'local-device-demo',expires_at:4102444800,account:{user_id:'on-device',display_name:'On-device demo'}});
   if(restoring)return <main className="sg-loading"><span className="sg-logo">↗</span><h2>Opening SmartGrowth…</h2><p>Restoring your account.</p></main>;
-  return <Router>{session?.account?<AppShell key={session.account.user_id} user={session.account} onLogout={logout}/>:<AuthEntry onSignedIn={signedIn}/>}</Router>;
+  if(session?.mode==='standalone')return <StandaloneApp onExit={()=>{clearSession();setSession(null);}}/>;
+  return <Router>{session?.account?<AppShell key={session.account.user_id} user={session.account} onLogout={logout}/>:<AuthEntry onSignedIn={signedIn} onStandaloneStart={startStandalone}/>}</Router>;
 }

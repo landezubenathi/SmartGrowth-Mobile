@@ -1,17 +1,90 @@
-# SmartGrowth — Your Business Journey (Account-enabled Mobile Pilot)
+# SmartGrowth — Your Business Journey
 
-**Four Horsemen Tech · Android / iOS-capable React + Capacitor / Web + FastAPI**
+**Four Horsemen Tech · mobile-first React + Capacitor (Android/iOS) and installable web app.**
 
-SmartGrowth is a standalone entrepreneur growth companion, separate from the legacy SmartFund funding platform. It provides per-account authentication, personal business records, a goal-driven Journey, Growth Passport, Bookkeeping, invoices, registration guidance, rule-based SmartShield, marketplace, fictional procurement practice and a 30-day Growth Advisor.
+This repository contains **two deliberately separate data modes**:
 
-**Getting started:** Read [`SMARTGROWTH_ACCOUNTS_AND_ANDROID.md`](SMARTGROWTH_ACCOUNTS_AND_ANDROID.md). On Windows run `START_SMARTGROWTH_WINDOWS.bat`, then visit http://localhost:3501. Local demo login: `demo@smartgrowth.local` / `SmartDemo!2026`.
+1. **Standalone on-device mode** (recommended for a hackathon demo): the React interface and its rules engine are packaged *inside* the Android APK. **No FastAPI server, internet connection, localhost, or account is needed** to operate the demo. All local data stays on the same device/browser; seeded businesses and demo opportunities are clearly fictional. Tap **Open SmartGrowth offline** at the welcome screen.
+2. **Hosted-account mode** (requires a server): preserves the original login, business growth tools and account-isolated SQLite API. It requires a reachable HTTPS FastAPI backend for use across devices. The two modes **do not automatically sync**.
 
-## Key design
+**Neither mode is production-ready financial infrastructure.** Demo payments move no money; scores are educational and not lender decisions; fraud checks are rules-based; user-supplied and sample financial data are not verified.
 
-- **Individual accounts:** register/sign in, salted PBKDF2 passwords, hashed 7-day session tokens; server blocks cross-account record access.
-- **Data persistence:** a SQLite database at `backend/data/growth_demo.sqlite3`, shared by modules but scoped by account.
-- **Mobile:** touch-friendly layout, bottom navigation, Capacitor Android/iOS configuration and repeatable Android debug-build GitHub Actions workflow. No APK is included in this ZIP.
-- **Convenience:** stay signed in across refreshes, Account page, password change, one-tap navigation to Money, Passport, Journey and Home.
-- **Continuity:** old demo records can be migrated by copying the SQLite file while both apps are stopped.
+## Project structure
 
-This is a **local pilot**, not a production-ready service. Never treat demo payments as real or use the fictional tenders as real opportunities. No generative AI API is connected.
+```text
+SmartGrowth-Mobile/
+├── frontend/                              # THE mobile/web application
+│   ├── src/App.js                         # Choose offline or hosted login
+│   ├── src/features/standalone/           # Mobile-first on-device mode
+│   │   ├── StandaloneApp.js               # Phone UI: journeys, business tools
+│   │   ├── standalone.css                 # Responsive styling
+│   │   ├── catalog.mjs                    # Fictional business examples + official links
+│   │   ├── engine.mjs                     # Finances, invoices, Passport, Advisor, SmartShield
+│   │   └── storage.mjs                    # Device records and JSON backup/restore
+│   ├── src/pages/                         # Original hosted-account pages preserved
+│   ├── public/                            # Installable PWA manifest/icons/offline cache
+│   ├── capacitor.config.json              # Native app ID, name and bundled webDir=build
+│   └── android/                            # Generated when building Android; not in ZIP
+├── backend/                               # OPTIONAL FastAPI/SQLite hosted-account demo
+├── scripts/export_local_sqlite_to_demo.py # Optional legacy demo import helper
+├── tests/                                 # Standalone engine + API tests
+├── .github/workflows/                     # Android APK and built website artifacts
+├── docs/SUBMISSION_AND_BUILD.md           # Start here for APK + PWA submission
+├── docs/DATA_SOURCES_AND_LIMITATIONS.md   # Data provenance, demo boundaries and privacy
+├── docs/STANDALONE_UAT.md                 # Exact phone-based test scenario
+├── START_WEB_ONLY_WINDOWS.bat           # React standalone, no Python needed
+├── BUILD_WEB_STANDALONE_WINDOWS.bat       # Production website build
+├── BUILD_ANDROID_APK_WINDOWS.bat          # Android SDK-dependent local APK build
+└── START_SMARTGROWTH_WINDOWS.bat          # Development: frontend + optional backend
+```
+
+The existing `frontend/` + `backend/` layout is intentional: **the mobile app is `frontend`**, not a browser portal wrapped around a constantly running Windows development server. This avoids destabilising the working React project while keeping the native build tools together. The hosted API is optional for standalone mode. The Android native folder is generated by Capacitor in the current hackathon workflow; before a production release, check native projects into version control and manage signing and platform configuration deliberately.
+
+## Quick web run
+
+```powershell
+cd frontend
+npm install --legacy-peer-deps
+npm start
+```
+
+Alternatively double-click `START_WEB_ONLY_WINDOWS.bat` on Windows. Open `http://localhost:3501` and select **Open SmartGrowth offline**. This path needs **no Python**. It runs with seeded fictional catering and technology businesses; you can also create an empty business in *any* sector (select “My own industry”).
+
+For a built static website:
+
+```powershell
+cd frontend
+npm run build
+```
+
+Deploy `frontend/build/` to an HTTPS static host. Its on-device demo does not require a backend. Once visited over HTTPS, the service worker caches the app shell for subsequent offline use (offline caching cannot be tested fully using a dev server). In an installed Capacitor APK, the web assets are bundled and work offline immediately.
+
+## Android APK without Android Studio
+
+Push this repository **at its root** to GitHub. Open **Actions → SmartGrowth Android debug build → Run workflow**. After success, download the `smartgrowth-debug-apk` workflow artifact and install the contained `app-debug.apk`. The same run also exposes a `smartgrowth-static-web` artifact. The APK is compiled by GitHub's Android SDK rather than by your PC. See [submission and build instructions](docs/SUBMISSION_AND_BUILD.md).
+
+The ZIP contains **source code**, not a prebuilt APK. GitHub Actions must successfully finish for the APK to be ready for submission. iOS native builds require a macOS/Xcode environment. Capacitor uses one React codebase but produces platform-specific native outputs.
+
+## What is real vs fictional?
+
+- **Real functionality:** entries you type are calculated and persist in local storage; invoice payment simulation is idempotent; automatic Passport progress; basic fraud warnings; independent business workspaces; export/import of your own data.
+- **Seeded demo records:** fictional amounts, businesses and buyers labelled Sample.
+- **Procurement practice:** fictional descriptions and prices explicitly labelled SAMPLE; match scores are similarity only.
+- **Real resources:** links to official CIPC BizPortal, SARS, Central Supplier Database and National Treasury eTender Portal. Their live data is **not imported** into the app (no authorised stable API integration has been implemented).
+
+## Data and accounts
+
+Offline mode has **no login security, cloud backups or multi-device sync**. It is for fictional demonstration data only. Device-local storage may be deleted when the app is uninstalled or browser storage is cleared. Use *More → Export data* to save a readable JSON backup; the user is responsible for protecting that file. Restoring replaces existing on-device records after confirmation.
+
+For account-based use, connect to the hosted FastAPI service over HTTPS, register/sign in via the original screen, and use its separate server-backed records. Do not expose the backend publicly until authentication, access control, operational monitoring, incident handling, backup/recovery, HTTPS, data retention and POPIA requirements are reviewed professionally.
+
+## Local tests
+
+```powershell
+node --test tests/offline-engine.test.mjs
+python -m unittest discover -s tests -p "test*.py" -v
+```
+
+**Known limitation:** Native APK builds and the final frontend production build require npm access / Android SDK and must be confirmed on GitHub or Windows. Syntax and unit tests alone do not guarantee a successful installed-app test.
+
+For migrating **old local SQLite demo records** into the on-device format, see [Data sources and limitations](docs/DATA_SOURCES_AND_LIMITATIONS.md). The import labels old records as unverified sample data and does not carry over hosted-account login credentials.
