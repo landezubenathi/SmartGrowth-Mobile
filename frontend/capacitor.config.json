@@ -1,0 +1,8 @@
+{
+  "appId": "za.co.fourhorsementech.smartgrowth",
+  "appName": "SmartGrowth",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https"
+  }
+}
