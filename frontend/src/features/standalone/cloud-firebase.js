@@ -4,8 +4,20 @@
 import {initializeApp,getApps,getApp} from 'firebase/app';
 import {getAuth,setPersistence,browserLocalPersistence,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail} from 'firebase/auth';
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,onSnapshot,setDoc} from 'firebase/firestore';
-const config={apiKey:process.env.REACT_APP_FIREBASE_API_KEY,authDomain:process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,projectId:process.env.REACT_APP_FIREBASE_PROJECT_ID,appId:process.env.REACT_APP_FIREBASE_APP_ID};
-export const firebaseConfigured=Object.values(config).every(v=>typeof v==='string'&&v.length>5&&!v.includes('YOUR_'));
+const config={
+ apiKey:process.env.REACT_APP_FIREBASE_API_KEY,
+ authDomain:process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+ projectId:process.env.REACT_APP_FIREBASE_PROJECT_ID,
+ appId:process.env.REACT_APP_FIREBASE_APP_ID,
+ storageBucket:process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || undefined,
+ messagingSenderId:process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || undefined,
+ measurementId:process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || undefined
+};
+// Only the first four properties are required for account sign-in and Firestore.
+// Do not require optional Analytics or Storage settings for a functioning offline app.
+const required=['apiKey','authDomain','projectId','appId'];
+export const firebaseConfigured=required.every(key=>typeof config[key]==='string'&&config[key].length>5&&!config[key].includes('YOUR_'));
+export const firebaseProjectName = firebaseConfigured ? config.projectId : null;
 let services;
 export function getCloud(){
  if(!firebaseConfigured)return null;

@@ -13,3 +13,11 @@ frontend/.env.production.local
 frontend/.env.development.local
 frontend/build/
 frontend/node_modules/
+
+# Local Firebase configuration and private data
+frontend/.env.local
+frontend/.env.*.local
+**/service-account*.json
+**/*firebase-adminsdk*.json
+backend/data/*.db
+backend/data/*.sqlite3

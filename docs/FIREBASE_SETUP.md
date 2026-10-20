@@ -1,3 +1,5 @@
+> **SmartGrowthMobile preconfigured edition:** This package already includes Four Horsemen Tech’s public Firebase Web configuration in `frontend/.env.local` (excluded from Git). Read [`SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md`](SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md) first; the generic steps below remain as reference. Do not replace the supplied configuration with example placeholders.
+
 # SmartGrowth: cloud accounts, offline sync and live National Treasury data
 
 **No locally running FastAPI server is required for the new mobile app.** The Android APK embeds the React application. Device-only business data is saved locally; when a Firebase project is configured, cloud account data is saved per user in Firestore. This integration has been implemented, but YOU must create/own the Firebase project to activate it. Avoid committing real credentials, passwords or business documents.

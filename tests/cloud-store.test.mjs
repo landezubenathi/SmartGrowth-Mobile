@@ -44,3 +44,9 @@ test('separate device examples only enter cloud on explicit import',()=>{
  assert.equal(copied.businesses.length,3);
  assert.equal(base.businesses.length,1);
 });
+
+test('empty placeholder is not automatically uploaded to Firebase',()=>{
+ const s=emptyCloudState();
+ const result=mergeState(s,[]);
+ assert.equal(result.needUpload.length,0);
+});

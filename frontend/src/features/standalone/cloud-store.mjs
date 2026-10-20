@@ -56,6 +56,8 @@ export function mergeState(local,remoteBusinesses){
  const businesses=[...byId.values()].filter(Boolean).slice(0,100);
  const state=validateState({...local,businesses,activeId:byId.has(local.activeId)?local.activeId:businesses[0].id});
  const needUpload=businesses.filter(b=>{
+  // An untouched empty placeholder is not a real business record.
+  if(b.isPlaceholder===true && !b.transactions?.length && !b.invoices?.length && !b.listings?.length)return false;
   const r=remoteBusinesses.find(x=>x?.id===b.id);
   if(!r)return true;
   if(stamp(b)>stamp(r))return true;

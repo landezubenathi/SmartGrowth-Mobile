@@ -1,3 +1,5 @@
+> **SmartGrowthMobile Firebase setup:** The attached ZIP now includes your actual Web App settings in Git-ignored `frontend/.env.local`. See [`docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md`](docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md). Firebase Authentication and Firestore still must be enabled and rules published in your own Firebase Console. For GitHub cloud APK builds, copy the four required Web App values into Actions Variables.
+
 # SmartGrowth — Offline-First Mobile + Cloud Accounts + Real Procurement Data
 
 Four Horsemen Tech's entrepreneur-focused app. **Android/iOS/web frontend does not need a local FastAPI server**. The React application is bundled into the Capacitor app; business records are available offline. Optional Firebase Auth + Cloud Firestore adds private accounts and automatic sync when the connection returns. Procurement cards can fetch official public National Treasury OCDS release data, then display saved records offline.
