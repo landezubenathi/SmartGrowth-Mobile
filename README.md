@@ -1,3 +1,7 @@
+## October 2026: National Treasury API integration
+
+The standalone mobile design is the preferred SmartGrowth experience. On-device accounts are not password secured; the optional hosted FastAPI account mode remains separate and does not auto-sync. The **Procurement** screen now supports National Treasury OCDS release requests with local caching and explicit source statuses; details and verification limits are in `docs/TREASURY_LIVE_DATA_AND_OFFLINE_LOGIN.md`. Firebase is not integrated.
+
 # SmartGrowth — Your Business Journey
 
 **Four Horsemen Tech · mobile-first React + Capacitor (Android/iOS) and installable web app.**

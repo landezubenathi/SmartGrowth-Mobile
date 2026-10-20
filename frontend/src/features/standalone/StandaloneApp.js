@@ -3,6 +3,7 @@ import {INDUSTRIES,PROVINCES,DOC_ITEMS,OFFICIAL_SOURCES} from './catalog.mjs';
 import {currency,financials,passport,journey,advice,blankBusiness,sampleBusiness,addTransaction,addInvoice,markInvoicePaid,fraudCheck,matches} from './engine.mjs';
 import {loadState,saveState,exportState,parseBackup} from './storage.mjs';
 import LiveInsights from './LiveInsights';
+import TreasuryOpportunities from './TreasuryOpportunities';
 import './standalone.css';
 const NAV=[['home','⌂','Home'],['journey','◇','Journey'],['money','▤','Money'],['passport','◈','Passport'],['more','☷','More']];
 const noop=()=>{};
@@ -78,7 +79,7 @@ export default function StandaloneApp({onExit=noop}){
      {j.next?<div className="sd-next"><span className="sd-nexticon">◇</span><div><b>{j.next.label}</b><p>{j.next.why}</p></div><Btn onClick={()=>go(j.next.page)}>Start →</Btn></div>:<p>All current journey milestones complete. Continue recording business activity.</p>}
     </Pane>
     <Pane title="Quick actions"><div className="sd-shortcuts">{[['money','➕','Record a sale'],['invoices','▤','New invoice'],['business','▣','Business profile'],['shield','♢','Check for scams'],['insights','◉','Live Insights'],['advisor','✦','Growth advice'],['opportunities','◇','Find opportunities']].map(([id,icon,label])=><button key={id} onClick={()=>go(id)}><span>{icon}</span>{label}<b>↗</b></button>)}</div></Pane>
-    <p className="sd-footnote">Business data stays on this device. Sample records are fictional. Live Insights fetches public weather, currency and economic information when available; it does not connect to banks, CIPC records or tender APIs.</p>
+    <p className="sd-footnote">Business data stays on this device. Sample records are fictional. Live Insights fetches public weather, currency and economic information when available; it does not connect to banks or CIPC records. The Procurement tab can fetch National Treasury OCDS data.</p>
    </>}
    {!createBusiness&&page==='journey'&&<>
     <div className="sd-heading"><small>PERSONALISED BUSINESS JOURNEY</small><h1>Where do you want to go?</h1><p>Your progress updates automatically from the records you save.</p></div>
@@ -121,7 +122,8 @@ export default function StandaloneApp({onExit=noop}){
    {!createBusiness&&page==='advisor'&&<><div className="sd-heading"><small>GROWTH ADVISOR</small><h1>Your next best actions.</h1><p>Simple explainable recommendations based only on locally saved data.</p></div><Pane title={guidance.summary} subtitle={guidance.note}><div className="sd-steps">{guidance.items.length?guidance.items.map((x,i)=><div className="sd-step" key={i}><span>{i+1}</span><div><b>{x.title}</b><p>{x.why}</p></div><button onClick={()=>go(x.page)}>Open →</button></div>):<Empty>All current milestones have been covered. Continue tracking sales and costs.</Empty>}</div></Pane></>}
    {!createBusiness&&page==='insights'&&<LiveInsights region={current.region} industry={current.industry}/>}
    {!createBusiness&&page==='opportunities'&&<><div className="sd-heading"><small>MARKET & PROCUREMENT ACCESS</small><h1>Find your next opportunity.</h1><p>Example briefs are fictional; official external portals may contain live opportunities.</p></div>
-    <Pane title="Live opportunity source" subtitle="We link to the official publication website; we do not scrape or verify its tenders."><div className="sd-source"><div><b>National Treasury eTender Portal</b><p>Search published tenders by sector and region using the official website.</p></div><InlineLink href="https://www.etenders.gov.za/">Open live portal</InlineLink></div><Btn light onClick={()=>patchBusiness(b=>({...b,reviewedOpportunities:true}),'Opportunity source marked reviewed.')}>{current.reviewedOpportunities?'✓ Reviewed':'Mark opportunity search reviewed'}</Btn></Pane>
+    <TreasuryOpportunities business={current}/>
+    <Pane title="Live opportunity source" subtitle="Official source portal for checking full notices and submission requirements."><div className="sd-source"><div><b>National Treasury eTender Portal</b><p>Search published tenders by sector and region using the official website.</p></div><InlineLink href="https://www.etenders.gov.za/">Open live portal</InlineLink></div><Btn light onClick={()=>patchBusiness(b=>({...b,reviewedOpportunities:true}),'Opportunity source marked reviewed.')}>{current.reviewedOpportunities?'✓ Reviewed':'Mark opportunity search reviewed'}</Btn></Pane>
     <Pane title="Fictional procurement practice briefs" subtitle={`Ranked by industry and province for ${current.name}. These are NOT real tenders.`}><div className="sd-catalog">{opportunities.slice(0,8).map(o=><div className="sd-catalogitem" key={o.id}><span className="sd-label">SAMPLE BRIEF · {o.score}/100 similarity</span><h3>{o.title}</h3><p>{o.description}</p><small>{o.industry} · {o.region} · Sample budget {currency(o.value)}</small></div>)}</div></Pane>
    </>}
    {!createBusiness&&page==='market'&&<><div className="sd-heading"><small>MARKET LINKS</small><h1>Show what you offer.</h1><p>On-device listings are not publicly published. Use them to prepare for customer discovery.</p></div>
@@ -135,7 +137,7 @@ export default function StandaloneApp({onExit=noop}){
     <Pane title="Backup and device privacy" subtitle="Your offline records live in this app/browser storage, not in your hosted account."><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div><div className="sd-actions"><Btn light onClick={()=>{if(window.confirm('Leave this device-only demonstration? Your saved data will remain on this device.'))onExit()}}>Exit offline demo</Btn></div></Pane>
     <Pane title="Online accounts (optional)"><p>Want account-based access across multiple devices? Sign in using the separate hosted-backend mode when your SmartGrowth API is deployed securely. Data in the two modes is <b>not automatically synced</b>.</p><Btn light onClick={onExit}>Go to account login →</Btn></Pane>
    </>}
-   <div className="sd-disclaimer">SMARTGROWTH · ON-DEVICE DEMONSTRATION · No real payments, official verification, cloud sync or API-integrated tenders. Public market and weather insights may be cached. <InlineLink href={taxSource.url}>Tax guidance</InlineLink></div>
+   <div className="sd-disclaimer">SMARTGROWTH · ON-DEVICE DEMONSTRATION · No real payments, official registration verification or cloud sync. Procurement records can be fetched from National Treasury when online, then saved for offline review. <InlineLink href={taxSource.url}>Tax guidance</InlineLink></div>
   </div>
   <nav className="sd-bottom" aria-label="Standalone main navigation">{NAV.map(([id,icon,name])=><button key={id} aria-current={page===id?'page':undefined} className={page===id?'active':''} onClick={()=>go(id)}><span>{icon}</span><small>{name}</small></button>)}</nav>
  </div>;

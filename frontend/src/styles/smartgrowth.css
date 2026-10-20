@@ -19,3 +19,7 @@
 .sg-offline-callout small{font-size:11px;color:#698a73;line-height:1.6}
 .sg-offline-start{border:0;background:#164c38;color:#fff;font-weight:900;border-radius:11px;padding:14px;min-height:49px;font-size:14px}
 .sg-online-separator{margin-top:18px;text-align:center;color:#6d8979;font-weight:900;font-size:11px;letter-spacing:1.6px}
+
+.sg-account-disclosure{margin-top:18px;border-top:1px solid #dce5df;padding-top:12px}
+.sg-account-disclosure summary{cursor:pointer;font-weight:650;padding:14px;border-radius:12px;background:#f4f8f5;color:#245f48}
+.sg-account-disclosure[open] summary{margin-bottom:12px}

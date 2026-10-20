@@ -4,3 +4,17 @@
 /* Live public context — keeps the original on-device visual language */
 .sd-live-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:17px}.sd-live-head h2{font-size:21px;margin:0 0 6px}.sd-live-head p{margin:0}.sd-live-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.sd-live-card{min-width:0;border:1px solid #e0ece3;background:#f8fbf7;border-radius:15px;padding:17px;display:flex;flex-direction:column;gap:8px}.sd-live-cardtop{display:flex;gap:5px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:12px;font-weight:800}.sd-live-value{font-size:clamp(24px,3vw,34px);letter-spacing:-.6px;color:#1a6745;line-height:1.1}.sd-live-card p{font-size:12px;line-height:1.5;color:#49695a;margin:0}.sd-live-card small{font-size:10px;color:#728b7d;line-height:1.5}.sd-live-card a{font-size:11px;color:#197354;font-weight:800;margin-top:auto}.sd-data-status{font-size:10px;padding:5px 7px;border-radius:30px;background:#e5ebe6;color:#516a5b}.sd-data-status.live{background:#d9f0df;color:#166842}.sd-data-status.cached{background:#fff1da;color:#946129}.sd-data-status.unavailable{background:#f0e6e2;color:#8b4935}.sd-live-caption{font-size:12px;color:#718779;margin:12px 0 0}.sd-live-tips{display:grid;gap:11px}.sd-live-tips>div{display:flex;align-items:flex-start;gap:10px;border-radius:12px;background:#f3f9f1;padding:12px}.sd-live-tips span{color:#267950}.sd-live-tips p{margin:0;font-size:13px;line-height:1.6;color:#426554}.sd-live-links{display:grid;gap:10px}.sd-live-links>a{display:block;padding:13px;border:1px solid #dcebe0;border-radius:11px;background:#f6faf6;color:#206b4b;font-size:13px;font-weight:800;text-decoration:none}
 @media(max-width:760px){.sd-live-grid{grid-template-columns:1fr}.sd-live-card{gap:7px}.sd-live-head h2{font-size:19px}}
+/* National Treasury open data — standalone mobile-first interface */
+.sd-treasury .sd-treasury-state{display:flex;flex-direction:column;gap:3px;background:var(--sd-soft,#f4f7f5);padding:12px 14px;border-radius:12px;margin:12px 0}
+.sd-treasury-state small{font-size:.78rem;opacity:.78}
+.sd-treasury-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:12px 0}
+.sd-treasury-actions label{display:flex;flex:1;min-width:132px;flex-direction:column;font-size:.78rem;font-weight:600;gap:4px}
+.sd-treasury-actions select{padding:10px;border-radius:10px;border:1px solid #cfd8d4;background:white}
+.sd-treasury-actions .sd-btn{min-height:43px}
+.sd-treasury-note{padding:12px;border:1px solid #e2b86e;background:#fff7e7;border-radius:10px;color:#754a04;font-size:.86rem}
+.sd-treasury-disclaimer{font-size:.81rem;line-height:1.6;color:inherit;opacity:.8}
+.sd-treasury-search{display:flex;flex-direction:column;gap:6px;font-weight:600;margin:14px 0}
+.sd-treasury-search input{border:1px solid #ccd7d3;border-radius:11px;padding:12px;max-width:100%}
+.sd-treasury-check{display:flex;align-items:center;gap:8px;font-size:.83rem;margin:12px 0}
+.sd-treasury-links{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px}
+.sd-treasury .sd-catalogitem small{display:block;margin:5px 0;line-height:1.4}

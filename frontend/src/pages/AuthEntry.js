@@ -30,8 +30,9 @@ export default function AuthEntry({onSignedIn,onStandaloneStart}) {
     </section>
     <section className="sg-welcome-card sg-auth-card">
       <span className="sg-chip">Standalone Android · iOS · Web</span>
-      <div className="sg-offline-callout"><strong>Run SmartGrowth without a server</strong><p>Start immediately with example businesses, or create your own. Bookkeeping, invoices, Passport, Journey and fraud screening run on this device—even without Wi-Fi.</p><button className="sg-offline-start" type="button" onClick={onStandaloneStart}>Open SmartGrowth offline →</button><small>Local demo records are not secured with a password or synced to your account.</small></div>
-      <div className="sg-online-separator">OR · USE A HOSTED ACCOUNT</div>
+      <div className="sg-offline-callout"><strong>Run SmartGrowth without a server</strong><p>Start immediately with example businesses, or create your own. Bookkeeping, invoices, Passport, Journey and fraud screening run on this device—even without Wi-Fi.</p><button className="sg-offline-start" type="button" onClick={onStandaloneStart}>Open SmartGrowth offline →</button><small>This on-device workspace stays available offline on the same installed app. It is not password-protected or synced to your online account.</small></div>
+      <details className="sg-account-disclosure"><summary>Use an online account instead (requires a hosted backend)</summary>
+      <div className="sg-online-separator">OPTIONAL · ACCOUNT-BASED MODE</div>
       <h2>{mode==='register'?'Create your account':'Welcome back'}</h2>
       <p>{mode==='register'?'Create a separate workspace for your business.':'Sign in to continue your business journey.'}</p>
       <form onSubmit={submit} className="sg-auth-form">
@@ -47,7 +48,8 @@ export default function AuthEntry({onSignedIn,onStandaloneStart}) {
         <button type="button" onClick={()=>setEditServer(!editServer)}>⚙ {editServer?'Hide':'Backend connection'} settings</button>
         {editServer&&<form onSubmit={e=>{e.preventDefault();try{saveApiBase(server);setEditServer(false);setError('');}catch(err){setError(err.message);}}}><input aria-label="Backend URL" value={server} onChange={e=>setServer(e.target.value)} placeholder="http://localhost:8000"/><button type="submit">Save server</button></form>}
       </div>
-      <p className="sg-safe">Local pilot only. Demo payments and opportunities are simulated. Real email verification and password recovery require a future hosted service.</p>
+      <p className="sg-safe">Online account records are separate from the on-device demo. A server is required and the two modes do not automatically sync. Firebase is not configured in this package.</p>
+      </details>
     </section>
   </main>;
 }
