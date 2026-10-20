@@ -7,9 +7,11 @@ async function requestPublic({url}){
   const response=await CapacitorHttp.get({url,headers:{Accept:'application/json'},connectTimeout:12000,readTimeout:15000});
   return {status:response.status,data:response.data};
  }
+ const proxy=process.env.REACT_APP_TREASURY_PROXY_URL?.trim();
+ const endpoint=proxy?`${proxy.replace(/\/$/,'')}?${new URL(url).searchParams.toString()}`:url;
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
  try {
-  const response=await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal});
+  const response=await fetch(endpoint,{headers:{Accept:'application/json'},signal:controller.signal});
   return {status:response.status,data:await response.json()};
  }finally{clearTimeout(timer);}
 }
@@ -17,7 +19,7 @@ const SourceLink=({href,children})=><a href={href} target="_blank" rel="noopener
 export default function TreasuryOpportunities({business}){
  const [feed,setFeed]=useState(()=>readTreasuryCache()||{status:'unavailable',records:[]});
  const [loading,setLoading]=useState(false);
- const [days,setDays]=useState(30);
+ const [days,setDays]=useState(7);
  const [query,setQuery]=useState('');
  const [onlyRelevant,setOnlyRelevant]=useState(false);
  const sorted=useMemo(()=>rankForBusiness(feed.records||[],business),[feed.records,business]);
@@ -28,9 +30,9 @@ export default function TreasuryOpportunities({business}){
   setFeed(readTreasuryCache()||{status:'unavailable',records:[]});
  },[]);
  return <section className="sd-panel sd-treasury" aria-label="Official National Treasury procurement data">
-  <div className="sd-panelhead"><h2>National Treasury procurement data</h2><p>Public OCDS records fetched from an official South African government API. Your business details remain on this device.</p></div>
+  <div className="sd-panelhead"><h2>National Treasury procurement data</h2><p>Official OCDS records via National Treasury (or a restricted web proxy). Only date filters are sent. Your financial records stay private.</p></div>
   <div className="sd-treasury-state" role="status"><strong>{feed.status==='live'?'● Retrieved from official API':feed.status==='cached'?'◷ Saved official records':'○ No downloaded records yet'}</strong><small>{feed.fetchedAt?`Last successful retrieval: ${new Date(feed.fetchedAt).toLocaleString('en-ZA')}`:'Connect to the internet to retrieve records.'}</small></div>
-  <div className="sd-treasury-actions"><label>Publication window <select value={days} onChange={e=>setDays(Number(e.target.value))}><option value={30}>Last 30 days</option><option value={60}>Last 60 days</option><option value={90}>Last 90 days</option></select></label><button className="sd-btn" onClick={refresh} disabled={loading}>{loading?'Contacting Treasury…':'↻ Fetch official data'}</button></div>
+  <div className="sd-treasury-actions"><label>Publication window <select value={days} onChange={e=>setDays(Number(e.target.value))}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={60}>Last 60 days</option><option value={90}>Last 90 days</option></select></label><button className="sd-btn" onClick={refresh} disabled={loading}>{loading?'Contacting Treasury…':'↻ Fetch official data'}</button></div>
   {feed.warning&&<p className="sd-treasury-note" role="status">{feed.status==='cached'?feed.warning:`Live refresh unavailable: ${feed.warning}. Please check your connection or try the official portal.`}</p>}
   {feed.records?.length>0?<>
    <p className="sd-treasury-disclaimer">{feed.records.length} records in this retrieval. Sorted by keyword relevance for <b>{business.industry}</b> in <b>{business.region}</b>. Matching is only a text-based suggestion, not an eligibility check.</p>

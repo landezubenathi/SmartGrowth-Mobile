@@ -1,9 +1,13 @@
-import React,{useMemo,useRef,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {INDUSTRIES,PROVINCES,DOC_ITEMS,OFFICIAL_SOURCES} from './catalog.mjs';
 import {currency,financials,passport,journey,advice,blankBusiness,sampleBusiness,addTransaction,addInvoice,markInvoicePaid,fraudCheck,matches} from './engine.mjs';
 import {loadState,saveState,exportState,parseBackup} from './storage.mjs';
 import LiveInsights from './LiveInsights';
 import TreasuryOpportunities from './TreasuryOpportunities';
+import {readTreasuryCache} from './treasury-data.mjs';
+import CloudSyncPanel from './CloudSyncPanel';
+import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness} from './cloud-firebase';
+import {loadCloudState,saveCloudState,mergeState,importDeviceToCloud} from './cloud-store.mjs';
 import './standalone.css';
 const NAV=[['home','⌂','Home'],['journey','◇','Journey'],['money','▤','Money'],['passport','◈','Passport'],['more','☷','More']];
 const noop=()=>{};
@@ -32,6 +36,10 @@ const BusinessForm=({onSave,onCancel,initial=null})=>{
 export default function StandaloneApp({onExit=noop}){
  const [state,setState]=useState(loadState);
  const [page,setPage]=useState('home');
+ const [cloudUser,setCloudUser]=useState(null);
+ const [workspace,setWorkspace]=useState('device');
+ const [cloudStatus,setCloudStatus]=useState('Device-only: works offline');
+ const cloudUid=cloudUser?.uid||null;
  const [notice,setNotice]=useState('');
  const [error,setError]=useState('');
  const [editBusiness,setEditBusiness]=useState(false);
@@ -52,23 +60,66 @@ export default function StandaloneApp({onExit=noop}){
  const goalFocus={start:['profile','compliance'],manage:['sale','invoice','expenses'],grow:['opportunity','sale'],protect:['compliance','opportunity']};
  const goalSteps=[...j.steps].sort((a,b)=>Number(goalFocus[selectedGoal]?.includes(b.id))-Number(goalFocus[selectedGoal]?.includes(a.id)));
  const opportunities=useMemo(()=>matches(current),[current]);
- function update(fn,message){try{setError('');const next=fn(state);setState(saveState(next));setNotice(message||'Saved on this device.');}catch(e){setError(e.message);}}
+ const publicFeed=readTreasuryCache();
+ // Firebase silently restores a previously signed-in account, even on later offline opens.
+ useEffect(()=>{
+  if(!firebaseConfigured)return;
+  return observeLogin(user=>{
+   if(user){setCloudUser(user);setWorkspace('cloud');setState(loadCloudState(user.uid));setCloudStatus(navigator.onLine?'Connecting to your cloud records…':'Offline — your account workspace is available on this device');}
+   else {setCloudUser(null);setWorkspace('device');setState(loadState());setCloudStatus('Device-only: works offline');}
+  });
+ },[]);
+ useEffect(()=>{
+  if(!cloudUid||workspace!=='cloud')return;
+  const uid=cloudUid;
+  let alive=true;
+  let stop;
+  try {stop=watchBusinesses(uid,(remote,meta)=>{
+   if(!alive)return;
+   const local=loadCloudState(uid);
+   const result=mergeState(local,remote);
+   try {saveCloudState(uid,result.state);setState(result.state);} catch(e){setError(e.message);}
+   setCloudStatus(meta.hasPendingWrites?'Waiting to upload changes…':meta.fromCache?'Offline / cached — changes sync when online':'Cloud connected — records up to date');
+   // Only backfill absent/newer records after confirmed server read to avoid stale cache overwriting remote.
+   if(!meta.fromCache)result.needUpload.forEach(b=>uploadBusiness(uid,b).catch(e=>setCloudStatus('Sync needs attention: '+e.message)));
+  },e=>setCloudStatus('Cloud connection error: '+e.message));}catch(e){setCloudStatus('Cloud configuration error: '+e.message);}
+  return ()=>{alive=false;stop?.();};
+ },[cloudUid,workspace]);
+ function update(fn,message){try{
+  setError('');const next=fn(state);
+  if(workspace==='cloud'&&cloudUid){
+   const changed=next.businesses.filter(b=>JSON.stringify(state.businesses.find(x=>x.id===b.id))!==JSON.stringify(b));
+   const now=new Date().toISOString();const stamped={...next,businesses:next.businesses.map(b=>changed.some(x=>x.id===b.id)?{...b,modifiedAt:now}:b)};
+   const saved=saveCloudState(cloudUid,stamped);setState(saved);
+   if(changed.length){setCloudStatus(navigator.onLine?'Uploading business changes…':'Offline — changes queued for sync');
+    stamped.businesses.filter(b=>changed.some(x=>x.id===b.id)).forEach(b=>uploadBusiness(cloudUid,b).catch(e=>setCloudStatus('Sync needs attention: '+e.message)));
+   }
+  }else{setState(saveState(next));}
+  setNotice(message||(workspace==='cloud'?'Saved to this account and queued for sync.':'Saved on this device.'));
+ }catch(e){setError(e.message);}}
+ function importLocalToAccount(){if(!cloudUid||workspace!=='cloud')return;
+  if(!window.confirm('Copy businesses from the separate device-only workspace into your signed-in account? This will not delete your device-only data.'))return;
+  update(current=>importDeviceToCloud(current,loadState()),'Device businesses copied into your cloud workspace and queued for sync.');
+ }
+ function openDevice(){setWorkspace('device');setState(loadState());setCloudStatus('Device-only mode. Cloud account remains signed in.');go('home');}
+ function openCloud(){if(!cloudUid)return;setWorkspace('cloud');setState(loadCloudState(cloudUid));setCloudStatus('Restoring private cloud workspace…');go('home');}
+
  function patchBusiness(fn,message){update(old=>({...old,businesses:old.businesses.map(b=>b.id===current.id?fn(b):b)}),message)}
  function go(p){setPage(p);setError('');setNotice('');window.scrollTo?.(0,0)}
  function create(d,withSamples=false){const b=withSamples?sampleBusiness(d.industry,d.region,d.name):blankBusiness(d.name,d.industry,d.region,d.description);
   if(d.description)b.description=d.description;
   update(s=>({...s,activeId:b.id,businesses:[...s.businesses,b]}),withSamples?'Fictional example business created.':'Business created. Start recording real entries only if you wish.');setCreateBusiness(false);go('home');}
- function edit(d){patchBusiness(b=>({...b,name:d.name.trim(),industry:d.industry,region:d.region,description:d.description||''}),'Business profile updated.');setEditBusiness(false);}
+ function edit(d){patchBusiness(b=>({...b,name:d.name.trim(),industry:d.industry,region:d.region,description:d.description||'',isPlaceholder:false}),'Business profile updated.');setEditBusiness(false);}
  function pay(id){patchBusiness(b=>markInvoicePaid(b,id),'Demo payment recorded once. No real money moved.');}
  async function restoreFile(e){const file=e.target.files?.[0];if(!file)return;try{if(file.size>6*1024*1024)throw Error('Backup file exceeds 6 MB.');
   const restored=parseBackup(await file.text());if(!window.confirm('Replace ALL standalone data on this device with this backup? Your current local records will be overwritten.'))return;
-  setState(saveState(restored));setNotice('Backup restored from your file.');setError('');go('home');}catch(err){setError(err.message);}finally{e.target.value='';}}
+  if(workspace==='cloud'&&cloudUid){update(()=>restored,'Backup restored to cloud workspace; preparing to sync.');}else{setState(saveState(restored));setNotice('Backup restored from your file.');}setError('');go('home');}catch(err){setError(err.message);}finally{e.target.value='';}}
  function downloadBackup(){const raw=exportState(state);const blob=new Blob([raw],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`smartgrowth-device-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);setNotice('Backup downloaded. Keep the file somewhere secure.');}
  const taxSource=OFFICIAL_SOURCES.find(x=>x.id==='sars');
  return <div className="sd-shell">
-  <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><span className="sd-mode">◉ DEVICE-FIRST</span></div></header>
+  <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><span className="sd-mode">{workspace==='cloud'?'☁ CLOUD + OFFLINE':'◉ DEVICE-FIRST'}</span></div></header>
   <div className="sd-content">
-   <div className="sd-businessbar"><div><small>ACTIVE BUSINESS</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+   <div className="sd-businessbar"><div><small>{workspace==='cloud'?'CLOUD WORKSPACE':'DEVICE WORKSPACE'}</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
    {notice&&<Notice>{notice} <button aria-label="Dismiss notice" onClick={()=>setNotice('')}>×</button></Notice>}
    {error&&<div className="sd-error" role="alert">{error}</div>}
    {createBusiness?<Pane title="Add another business" subtitle="Create an empty workspace or select a fictional business example."><BusinessForm onSave={d=>create(d,false)} onCancel={()=>setCreateBusiness(false)}/><div className="sd-subtle"><p>Want a populated sample to demonstrate immediately?</p><div className="sd-samplegrid">{INDUSTRIES.slice(0,9).map(i=><button key={i.id} onClick={()=>create({name:`${i.example} (Sample)`,industry:i.id,region:'Eastern Cape'},true)}>{i.icon} {i.id}</button>)}</div></div></Pane>:null}
@@ -79,7 +130,8 @@ export default function StandaloneApp({onExit=noop}){
      {j.next?<div className="sd-next"><span className="sd-nexticon">◇</span><div><b>{j.next.label}</b><p>{j.next.why}</p></div><Btn onClick={()=>go(j.next.page)}>Start →</Btn></div>:<p>All current journey milestones complete. Continue recording business activity.</p>}
     </Pane>
     <Pane title="Quick actions"><div className="sd-shortcuts">{[['money','➕','Record a sale'],['invoices','▤','New invoice'],['business','▣','Business profile'],['shield','♢','Check for scams'],['insights','◉','Live Insights'],['advisor','✦','Growth advice'],['opportunities','◇','Find opportunities']].map(([id,icon,label])=><button key={id} onClick={()=>go(id)}><span>{icon}</span>{label}<b>↗</b></button>)}</div></Pane>
-    <p className="sd-footnote">Business data stays on this device. Sample records are fictional. Live Insights fetches public weather, currency and economic information when available; it does not connect to banks or CIPC records. The Procurement tab can fetch National Treasury OCDS data.</p>
+    <Pane title="Real business opportunities" subtitle="Public National Treasury procurement records, matched to your business industry and province."><p className="sd-muted">{publicFeed?.records?.length?`${publicFeed.records.length} published OCDS records cached from ${publicFeed.fetchedAt?.slice(0,10)||'a previous fetch'}. Check the source and deadline before applying.`:'No official records saved yet. Connect to the internet and fetch the latest source data.'}</p><Btn onClick={()=>go('opportunities')}>Explore Treasury opportunities →</Btn></Pane>
+    <p className="sd-footnote">{workspace==='cloud'?'Your account records are cached on this device and synchronise when connectivity returns.':'Business records are stored on this device until you sign in and explicitly import them.'} Sample records are fictional. Live Insights fetches public weather, currency and economic information when available; it does not connect to banks or CIPC records. The Procurement tab can fetch National Treasury OCDS data.</p>
    </>}
    {!createBusiness&&page==='journey'&&<>
     <div className="sd-heading"><small>PERSONALISED BUSINESS JOURNEY</small><h1>Where do you want to go?</h1><p>Your progress updates automatically from the records you save.</p></div>
@@ -134,10 +186,12 @@ export default function StandaloneApp({onExit=noop}){
    {!createBusiness&&page==='more'&&<><div className="sd-heading"><small>WORKSPACE & SETTINGS</small><h1>Make SmartGrowth yours.</h1><p>Choose tools, switch businesses or back up your on-device data.</p></div>
     <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','▣','My businesses'],['invoices','▤','Invoices'],['advisor','✦','Growth Advisor'],['shield','♢','SmartShield'],['market','▢','Market Links'],['insights','◉','Live Insights'],['opportunities','◇','Procurement'],['sources','↗','Official Sources']].map(([id,icon,label])=><button onClick={()=>go(id)} key={id}><span>{icon}</span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Add or switch businesses" subtitle="Every business has its own finances, invoices, Passport and Journey."><div className="sd-businesslist">{state.businesses.map(b=><button key={b.id} className={b.id===current.id?'current':''} onClick={()=>{update(s=>({...s,activeId:b.id}));go('home')}}>{b.name} <small>{b.industry} · {b.region}</small></button>)}</div><Btn light onClick={()=>setCreateBusiness(true)}>+ Create another business</Btn></Pane>
-    <Pane title="Backup and device privacy" subtitle="Your offline records live in this app/browser storage, not in your hosted account."><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div><div className="sd-actions"><Btn light onClick={()=>{if(window.confirm('Leave this device-only demonstration? Your saved data will remain on this device.'))onExit()}}>Exit offline demo</Btn></div></Pane>
-    <Pane title="Online accounts (optional)"><p>Want account-based access across multiple devices? Sign in using the separate hosted-backend mode when your SmartGrowth API is deployed securely. Data in the two modes is <b>not automatically synced</b>.</p><Btn light onClick={onExit}>Go to account login →</Btn></Pane>
+    <Pane title="Backup and device privacy" subtitle={workspace==='cloud'?'This account is cached locally and synchronises when online.':'Your offline records stay on this device until you explicitly import them into an account.'}><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div><div className="sd-actions"><Btn light onClick={()=>{setNotice('SmartGrowth is already running independently. You can close the app whenever you like.');}}>About offline use</Btn></div></Pane>
+    {workspace==='device'&&cloudUid&&<Pane title="Your cloud workspace"><p>You are signed into {cloudUser.email} but viewing device-only records.</p><Btn onClick={openCloud}>Open my account records →</Btn></Pane>}
+    <CloudSyncPanel user={cloudUser} status={cloudStatus} workspace={workspace} onImport={importLocalToAccount} onOpenDevice={openDevice} onOpenCloud={openCloud}/>
+
    </>}
-   <div className="sd-disclaimer">SMARTGROWTH · ON-DEVICE DEMONSTRATION · No real payments, official registration verification or cloud sync. Procurement records can be fetched from National Treasury when online, then saved for offline review. <InlineLink href={taxSource.url}>Tax guidance</InlineLink></div>
+   <div className="sd-disclaimer">SMARTGROWTH · ON-DEVICE DEMONSTRATION · No real payments or official registration verification. Cloud syncing requires a configured Firebase project and an initial online sign-in. Procurement records can be fetched from National Treasury when online, then saved for offline review. <InlineLink href={taxSource.url}>Tax guidance</InlineLink></div>
   </div>
   <nav className="sd-bottom" aria-label="Standalone main navigation">{NAV.map(([id,icon,name])=><button key={id} aria-current={page===id?'page':undefined} className={page===id?'active':''} onClick={()=>go(id)}><span>{icon}</span><small>{name}</small></button>)}</nav>
  </div>;

@@ -6,3 +6,10 @@ backend/__pycache__/
 backend/data/*.sqlite3
 .env
 *.pyc
+
+# Firebase project config, local data, and build artifacts
+frontend/.env.local
+frontend/.env.production.local
+frontend/.env.development.local
+frontend/build/
+frontend/node_modules/

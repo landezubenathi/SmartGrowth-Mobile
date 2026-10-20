@@ -16,7 +16,8 @@
     "postcss": "^8.4.32",
     "@capacitor/core": "^8.0.0",
     "@capacitor/android": "^8.0.0",
-    "@capacitor/ios": "^8.0.0"
+    "@capacitor/ios": "^8.0.0",
+    "firebase": "^12.3.0"
   },
   "scripts": {
     "start": "set PORT=3501 && react-scripts start",

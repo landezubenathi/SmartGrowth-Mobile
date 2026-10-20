@@ -1,0 +1,6 @@
+name = "smartgrowth-treasury"
+main = "treasury-worker.js"
+compatibility_date = "2026-09-01"
+
+# Set ALLOWED_ORIGIN as a Worker variable to your hosted SmartGrowth https:// domain.
+# For an APK, the app calls National Treasury directly with native Capacitor HTTP.

@@ -9,7 +9,7 @@ export function financials(business){
 export function passport(b){
  const f=financials(b);const inv=b.invoices||[];
  const automatic=[
-  {id:'profile',label:'Business profile completed',points:15,complete:Boolean(b.name?.trim()&&b.industry&&b.region)},
+  {id:'profile',label:'Business profile completed',points:15,complete:Boolean(!b.isPlaceholder&&b.name?.trim()&&b.industry&&b.region)},
   {id:'invoice',label:'First invoice created',points:10,complete:inv.length>0},
   {id:'sale',label:'Income recorded',points:15,complete:f.income>0},
   {id:'surplus',label:'Positive recorded surplus',points:10,complete:f.income>0&&f.surplus>0},
@@ -24,7 +24,7 @@ export function passport(b){
 export function journey(b){
  const pass=passport(b),inv=b.invoices||[];
  const activities=[
-  {id:'profile',label:'Create your business profile',done:Boolean(b.name),page:'business',why:'Personalise your plan by business type and location.'},
+  {id:'profile',label:'Create your business profile',done:Boolean(!b.isPlaceholder&&b.name),page:'business',why:'Personalise your plan by business type and location.'},
   {id:'sale',label:'Record your first sale',done:pass.financials.income>0,page:'money',why:'Build an accurate history of your income.'},
   {id:'invoice',label:'Issue an invoice',done:inv.length>0,page:'invoices',why:'Keep track of customer payments.'},
   {id:'expenses',label:'Capture a business expense',done:pass.financials.expenses>0,page:'money',why:'Know what it costs to operate.'},
