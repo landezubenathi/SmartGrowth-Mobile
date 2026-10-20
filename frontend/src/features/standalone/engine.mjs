@@ -1,4 +1,5 @@
 import {INDUSTRIES, DOC_ITEMS, DEMO_OPPORTUNITIES, FRAUD_RULES} from './catalog.mjs';
+import {complianceDetails} from './compliance.mjs';
 export const currency = x => 'R '+Number(x||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
 export const total = (xs,kind) => Math.round(xs.filter(t=>t.kind===kind).reduce((sum,t)=>sum+Number(t.amount),0)*100)/100;
 export function financials(business){
@@ -28,7 +29,7 @@ export function journey(b){
   {id:'sale',label:'Record your first sale',done:pass.financials.income>0,page:'money',why:'Build an accurate history of your income.'},
   {id:'invoice',label:'Issue an invoice',done:inv.length>0,page:'invoices',why:'Keep track of customer payments.'},
   {id:'expenses',label:'Capture a business expense',done:pass.financials.expenses>0,page:'money',why:'Know what it costs to operate.'},
-  {id:'compliance',label:'Review relevant business documents',done:Object.values(b.documents||{}).some(Boolean),page:'passport',why:'External evidence is self-declared until verified.'},
+  {id:'compliance',label:'Review relevant business documents',done:Object.values(b.documents||{}).some(Boolean)||complianceDetails(b).items.some(x=>x.type==='self-reported'&&x.done),page:'compliance',why:'Review CIPC, SARS or supplier requirements through official channels; self-reported progress is not verification.'},
   {id:'opportunity',label:'Explore market and procurement resources',done:Boolean(b.reviewedOpportunities),page:'opportunities',why:'Look for real opportunities via trusted official sources.'}
  ];
  return {steps:activities,completed:activities.filter(i=>i.done).length,total:activities.length,next:activities.find(i=>!i.done)};
@@ -36,6 +37,8 @@ export function journey(b){
 export function advice(b){
  const f=financials(b),p=passport(b),j=journey(b),unpaid=b.invoices.filter(i=>i.status!=='paid');
  const items=[];
+ const compliance=complianceDetails(b);
+ if(compliance.done<compliance.total)items.push({title:'Review your business compliance steps',why:`${compliance.total-compliance.done} recommended review(s) remain for this business structure. This is preparation, not official verification.`,page:'compliance',priority:'High'});
  if(j.next)items.push({title:j.next.label,why:j.next.why,page:j.next.page,priority:'First'});
  if(unpaid.length)items.push({title:`Follow up on ${unpaid.length} unpaid invoice(s)`,why:`${currency(unpaid.reduce((s,i)=>s+i.amount,0))} billed but not recorded as received.`,page:'invoices',priority:'High'});
  if(f.expenses>f.income&&f.income>0)items.push({title:'Review operating expenses',why:'Recorded expenses currently exceed income. Review costs before committing to new work.',page:'money',priority:'High'});

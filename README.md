@@ -1,3 +1,13 @@
+> **SmartGrowth v1.2:** Business Compliance Hub added. See [Compliance guide](docs/SMARTGROWTH_V1_2_COMPLIANCE.md). This release offers offline readiness checks and official portal links; it does not yet conduct automatic government registration verification.
+
+# SmartGrowth — Personalised Business Intelligence Upgrade
+
+**New:** `✦ Insights` presents business-specific income/expense trends, overdue invoice reminders, spending categories, monthly goals and explainable actions while keeping the app offline-first. See [upgrade and deployment instructions](docs/INTELLIGENCE_UPGRADE_AND_RELEASE.md).
+
+**Web release:** double-click `PUBLISH_WEB_WINDOWS.bat` after backing up data. **Android release:** push to GitHub → Actions → download the new APK. These are independent updates.
+
+---
+
 > **SmartGrowthMobile Firebase setup:** The attached ZIP now includes your actual Web App settings in Git-ignored `frontend/.env.local`. See [`docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md`](docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md). Firebase Authentication and Firestore still must be enabled and rules published in your own Firebase Console. For GitHub cloud APK builds, copy the four required Web App values into Actions Variables.
 
 # SmartGrowth — Offline-First Mobile + Cloud Accounts + Real Procurement Data
