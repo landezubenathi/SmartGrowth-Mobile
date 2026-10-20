@@ -88,3 +88,10 @@ python -m unittest discover -s tests -p "test*.py" -v
 **Known limitation:** Native APK builds and the final frontend production build require npm access / Android SDK and must be confirmed on GitHub or Windows. Syntax and unit tests alone do not guarantee a successful installed-app test.
 
 For migrating **old local SQLite demo records** into the on-device format, see [Data sources and limitations](docs/DATA_SOURCES_AND_LIMITATIONS.md). The import labels old records as unverified sample data and does not carry over hosted-account login credentials.
+
+## New: Live Business Insights (hybrid online/offline)
+
+The polished **on-device SmartGrowth** interface now includes a **Live Insights** page (Home quick action and More). When connected, it requests weather (Open-Meteo), daily USD/ZAR reference exchange rates (Frankfurter) and the latest published annual South African inflation observation (World Bank). Successful observations are cached; offline mode explicitly labels saved values and never fabricates source numbers. Business transactions and Passport logic remain private to the device and work offline.
+
+Run the relevant tests: `node --test tests/live-data.test.mjs tests/offline-engine.test.mjs`. Details: `docs/LIVE_INSIGHTS_PHASE.md`. Procurement and CIPC remain official links until their APIs are independently integrated and authorised.
+
