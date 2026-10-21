@@ -6,14 +6,17 @@ import LiveInsights from './LiveInsights';
 import TreasuryOpportunities from './TreasuryOpportunities';
 import {readTreasuryCache} from './treasury-data.mjs';
 import CloudSyncPanel from './CloudSyncPanel';
-import BusinessIntelligence from './BusinessIntelligence';
+import BusinessAssistant from './BusinessAssistant';
+import ModernIcon from './ModernIcon';
+import NotificationsCentre from './NotificationsCentre';
+import {businessNotifications} from './notifications.mjs';
+import {demoVerificationFor} from './demo-verification.mjs';
 import ComplianceHub from './ComplianceHub';
-import {complianceDetails} from './compliance.mjs';
 import {analyzeBusiness} from './intelligence.mjs';
-import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness} from './cloud-firebase';
+import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness,observePublicListings,publishMarketListing,unpublishMarketListing} from './cloud-firebase';
 import {loadCloudState,saveCloudState,mergeState,importDeviceToCloud} from './cloud-store.mjs';
 import './standalone.css';
-const NAV=[['home','⌂','Home'],['journey','◇','Journey'],['money','▤','Money'],['intelligence','✦','Insights'],['passport','◈','Passport'],['more','☷','More']];
+const NAV=[['home','Home'],['journey','Journey'],['money','Money'],['assistant','Ask'],['passport','Passport'],['more','More']];
 const noop=()=>{};
 const today=()=>new Date().toISOString().slice(0,10);
 function Pane({title,subtitle,children,className=''}){return <section className={'sd-panel '+className}><div className="sd-panelhead"><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{children}</section>}
@@ -29,7 +32,7 @@ const BusinessForm=({onSave,onCancel,initial=null})=>{
  const industryChoice=INDUSTRIES.some(i=>i.id===draft.industry)?draft.industry:'Custom';
  return <form className="sd-form" onSubmit={e=>{e.preventDefault();try{onSave({...draft,industry:industryChoice==='Custom'?custom.trim():draft.industry});}catch(err){setError(err.message);}}}>
   <label>Business name<input value={draft.name} required maxLength={90} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Khula Auto Repairs"/></label>
-  <label>Business type / industry<select value={industryChoice} onChange={e=>setDraft({...draft,industry:e.target.value})}>{INDUSTRIES.map(i=><option key={i.id} value={i.id}>{i.icon} {i.id}</option>)}<option value="Custom">My own industry…</option></select></label>
+  <label>Business type / industry<select value={industryChoice} onChange={e=>setDraft({...draft,industry:e.target.value})}>{INDUSTRIES.map(i=><option key={i.id} value={i.id}>{i.id}</option>)}<option value="Custom">My own industry…</option></select></label>
   {industryChoice==='Custom'&&<label>Describe your industry<input value={custom} required maxLength={60} onChange={e=>setCustom(e.target.value)} placeholder="e.g. Automotive repairs"/></label>}
   <label>Province<select value={draft.region} onChange={e=>setDraft({...draft,region:e.target.value})}>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></label>
   <label>What does the business offer?<textarea rows={3} maxLength={400} value={draft.description||''} onChange={e=>setDraft({...draft,description:e.target.value})} placeholder="Describe your products, customers and services."/></label>
@@ -42,6 +45,9 @@ export default function StandaloneApp({onExit=noop}){
  const [page,setPage]=useState('home');
  const [cloudUser,setCloudUser]=useState(null);
  const [workspace,setWorkspace]=useState('device');
+ const [publicListings,setPublicListings]=useState([]);
+ const [marketError,setMarketError]=useState('');
+ const [publishingId,setPublishingId]=useState(null);
  const [cloudStatus,setCloudStatus]=useState('Device-only: works offline');
  const cloudUid=cloudUser?.uid||null;
  const [notice,setNotice]=useState('');
@@ -61,7 +67,12 @@ export default function StandaloneApp({onExit=noop}){
  const j=useMemo(()=>journey(current),[current]);
  const f=p.financials;
  const intelligence=useMemo(()=>analyzeBusiness(current),[current]);
- const compliance=useMemo(()=>complianceDetails(current),[current]);
+ const alerts=useMemo(()=>businessNotifications(current),[current]);
+ const notificationKey=`sg_alerts_seen_${cloudUid||'device'}_${current.id}`;
+ const [seenNotifications,setSeenNotifications]=useState([]);
+ useEffect(()=>{try{setSeenNotifications(JSON.parse(localStorage.getItem(notificationKey)||'[]'));}catch(_){setSeenNotifications([]);}},[notificationKey]);
+ const unread=alerts.filter(a=>!seenNotifications.includes(a.id)).length;
+ function markSeen(ids){const next=[...new Set([...seenNotifications,...ids])];setSeenNotifications(next);try{localStorage.setItem(notificationKey,JSON.stringify(next));}catch(_){/* optional read history */}}
  const guidance=useMemo(()=>advice(current),[current]);
  const goalFocus={start:['profile','compliance'],manage:['sale','invoice','expenses'],grow:['opportunity','sale'],protect:['compliance','opportunity']};
  const goalSteps=[...j.steps].sort((a,b)=>Number(goalFocus[selectedGoal]?.includes(b.id))-Number(goalFocus[selectedGoal]?.includes(a.id)));
@@ -71,8 +82,8 @@ export default function StandaloneApp({onExit=noop}){
  useEffect(()=>{
   if(!firebaseConfigured)return;
   return observeLogin(user=>{
-   if(user){setCloudUser(user);setWorkspace('cloud');setState(loadCloudState(user.uid));setCloudStatus(navigator.onLine?'Connecting to your cloud records…':'Offline — your account workspace is available on this device');}
-   else {setCloudUser(null);setWorkspace('device');setState(loadState());setCloudStatus('Device-only: works offline');}
+   if(user){setCloudUser(user);setWorkspace('cloud');setState(loadCloudState(user.uid));setPage('home');setCreateBusiness(false);setCloudStatus(navigator.onLine?'Connecting to your cloud records…':'Offline — your account workspace is available on this device');}
+   else {setCloudUser(null);setWorkspace('device');setState(loadState());setPage('home');setCloudStatus('Device-only: works offline');}
   });
  },[]);
  useEffect(()=>{
@@ -91,6 +102,28 @@ export default function StandaloneApp({onExit=noop}){
   },e=>setCloudStatus('Cloud connection error: '+e.message));}catch(e){setCloudStatus('Cloud configuration error: '+e.message);}
   return ()=>{alive=false;stop?.();};
  },[cloudUid,workspace]);
+ // Public market feed is separate from owner-private Firestore businesses.
+ useEffect(()=>{
+  if(!cloudUid||!firebaseConfigured){setPublicListings([]);return;}
+  let alive=true;
+  try{return observePublicListings(items=>{if(alive){setPublicListings(items);setMarketError('');}},e=>{if(alive)setMarketError('Shared marketplace unavailable: '+e.message);});}
+  catch(e){setMarketError(e.message);}
+  return ()=>{alive=false;};
+ },[cloudUid]);
+ async function publishListing(item){
+  if(!cloudUid||workspace!=='cloud'){setError('Sign in and use your cloud workspace to publish a market listing.');return;}
+  setPublishingId(item.id);setError('');
+  try {await publishMarketListing(cloudUid,current,item);setNotice('Offer published to the shared marketplace for signed-in users.');}
+  catch(e){setError('Could not publish: '+e.message);}
+  finally{setPublishingId(null);}
+ }
+ async function unpublishListing(item){
+  if(!cloudUid||workspace!=='cloud')return;
+  setPublishingId(item.id);setError('');
+  try {await unpublishMarketListing(cloudUid,item);setNotice('Offer removed from the shared marketplace.');}
+  catch(e){setError('Could not unpublish: '+e.message);}
+  finally{setPublishingId(null);}
+ }
  function update(fn,message){try{
   setError('');const next=fn(state);
   if(workspace==='cloud'&&cloudUid){
@@ -111,7 +144,7 @@ export default function StandaloneApp({onExit=noop}){
  function openCloud(){if(!cloudUid)return;setWorkspace('cloud');setState(loadCloudState(cloudUid));setCloudStatus('Restoring private cloud workspace…');go('home');}
 
  function patchBusiness(fn,message){update(old=>({...old,businesses:old.businesses.map(b=>b.id===current.id?fn(b):b)}),message)}
- function go(p){setPage(p);setError('');setNotice('');window.scrollTo?.(0,0)}
+ function go(p){setPage(p==='intelligence'||p==='advisor'?'assistant':p);setError('');setNotice('');window.scrollTo?.(0,0)}
  function create(d,withSamples=false){const b=withSamples?sampleBusiness(d.industry,d.region,d.name):blankBusiness(d.name,d.industry,d.region,d.description);
   if(d.description)b.description=d.description;
   update(s=>({...s,activeId:b.id,businesses:[...s.businesses,b]}),withSamples?'Fictional example business created.':'Business created. Start recording real entries only if you wish.');setCreateBusiness(false);go('home');}
@@ -123,29 +156,29 @@ export default function StandaloneApp({onExit=noop}){
  function downloadBackup(){const raw=exportState(state);const blob=new Blob([raw],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`smartgrowth-device-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);setNotice('Backup downloaded. Keep the file somewhere secure.');}
  const taxSource=OFFICIAL_SOURCES.find(x=>x.id==='sars');
  return <div className="sd-shell">
-  <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><span className="sd-mode">{workspace==='cloud'?'☁ CLOUD + OFFLINE':'◉ DEVICE-FIRST'}</span></div></header>
+  <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark"><ModernIcon name="insights" size={23}/></span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><div className="sd-top-actions"><button className="sd-bell" aria-label={`Notifications (${unread} unread)`} onClick={()=>go('notifications')}><ModernIcon name="notifications" size={21}/>{unread>0&&<sup>{unread}</sup>}</button><span className="sd-mode">{workspace==='cloud'?'CLOUD + OFFLINE':'DEVICE-FIRST'}</span></div></div></header>
   <div className="sd-content">
    <div className="sd-businessbar"><div><small>{workspace==='cloud'?'CLOUD WORKSPACE':'DEVICE WORKSPACE'}</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
    {notice&&<Notice>{notice} <button aria-label="Dismiss notice" onClick={()=>setNotice('')}>×</button></Notice>}
    {error&&<div className="sd-error" role="alert">{error}</div>}
-   {createBusiness?<Pane title="Add another business" subtitle="Create an empty workspace or select a fictional business example."><BusinessForm onSave={d=>create(d,false)} onCancel={()=>setCreateBusiness(false)}/><div className="sd-subtle"><p>Want a populated sample to demonstrate immediately?</p><div className="sd-samplegrid">{INDUSTRIES.slice(0,9).map(i=><button key={i.id} onClick={()=>create({name:`${i.example} (Sample)`,industry:i.id,region:'Eastern Cape'},true)}>{i.icon} {i.id}</button>)}</div></div></Pane>:null}
+   {createBusiness?<Pane title="Add another business" subtitle="Create an empty workspace or select a fictional business example."><BusinessForm onSave={d=>create(d,false)} onCancel={()=>setCreateBusiness(false)}/><div className="sd-subtle"><p>Want a populated sample to demonstrate immediately?</p><div className="sd-samplegrid">{INDUSTRIES.slice(0,9).map(i=><button key={i.id} onClick={()=>create({name:`${i.example} (Sample)`,industry:i.id,region:'Eastern Cape'},true)}><ModernIcon name="business" size={16}/> {i.id}</button>)}</div></div></Pane>:null}
    {!createBusiness&&page==='home'&&<>
     <section className="sd-hero"><div className="sd-eyebrow">SMARTGROWTH · FOUR HORSEMEN TECH</div><h1>Build your business.<br/><em>One step at a time.</em></h1><p>Manage your records, track readiness and discover your next action—even without an internet connection.</p><Btn onClick={()=>go('journey')}>Continue my journey →</Btn></section>
     <div className="sd-kpis"><Kpi label="Recorded income" value={currency(f.income)}/><Kpi label="Recorded expenses" value={currency(f.expenses)}/><Kpi label="Operating surplus" value={currency(f.surplus)} note="From entered/demo records"/><Kpi label="Growth Passport" value={`${p.score}/100`} note="Unverified readiness"/></div>
-    <Pane title="Your business intelligence" subtitle="Personalised to the selected business and updated from saved or synced records.">
-     <div className="sd-next"><span className="sd-nexticon">✦</span><div><b>{currency(intelligence.current.surplus)} recorded surplus in the last 30 days</b><p>{intelligence.actions.length?intelligence.actions[0].title:'Insights are ready.'} · {intelligence.invoices.unpaidCount} unpaid invoice(s). No bank verification.</p></div><Btn onClick={()=>go('intelligence')}>Explore →</Btn></div>
+    <Pane title="Ask SmartGrowth" subtitle="Questions about the app and the selected business, with locally calculated explanations.">
+     <div className="sd-next"><span className="sd-nexticon"><ModernIcon name="assistant"/></span><div><b>{currency(intelligence.current.surplus)} recorded surplus in the last 30 days</b><p>{intelligence.actions.length?intelligence.actions[0].title:'Insights are ready.'} · {intelligence.invoices.unpaidCount} unpaid invoice(s). No bank verification.</p></div><Btn onClick={()=>go('assistant')}>Ask SmartGrowth →</Btn></div>
     </Pane>
-    <Pane title="Business compliance" subtitle="Track registration and tax guidance appropriate for your business."><div className="sd-next"><span className="sd-nexticon">✓</span><div><b>{compliance.done}/{compliance.total} preparation steps reviewed</b><p>Official records have not been independently verified.</p></div><Btn onClick={()=>go('compliance')}>Review →</Btn></div></Pane>
+    <Pane title="Business verification demo" subtitle="Check against fictional registry records only."><div className="sd-next"><span className="sd-nexticon"><ModernIcon name="compliance"/></span><div><b>{demoVerificationFor(current).label}</b><p>Simulation only — not connected to the official CIPC register.</p></div><Btn onClick={()=>go('compliance')}>Verify →</Btn></div></Pane>
     <Pane title="Your next step" subtitle="Detected automatically from this business's saved records.">
-     {j.next?<div className="sd-next"><span className="sd-nexticon">◇</span><div><b>{j.next.label}</b><p>{j.next.why}</p></div><Btn onClick={()=>go(j.next.page)}>Start →</Btn></div>:<p>All current journey milestones complete. Continue recording business activity.</p>}
+     {j.next?<div className="sd-next"><span className="sd-nexticon"><ModernIcon name="journey"/></span><div><b>{j.next.label}</b><p>{j.next.why}</p></div><Btn onClick={()=>go(j.next.page)}>Start →</Btn></div>:<p>All current journey milestones complete. Continue recording business activity.</p>}
     </Pane>
-    <Pane title="Quick actions"><div className="sd-shortcuts">{[['compliance','✓','Business compliance'],['money','➕','Record a sale'],['invoices','▤','New invoice'],['business','▣','Business profile'],['shield','♢','Check for scams'],['intelligence','✦','My Intelligence'],['insights','◉','Live Insights'],['advisor','✧','Growth advice'],['opportunities','◇','Find opportunities']].map(([id,icon,label])=><button key={id} onClick={()=>go(id)}><span>{icon}</span>{label}<b>↗</b></button>)}</div></Pane>
+    <Pane title="Quick actions"><div className="sd-shortcuts">{[['compliance','Verify business'],['money','Record a sale'],['invoices','New invoice'],['business','Business profile'],['market','Market Links'],['assistant','Ask SmartGrowth'],['insights','Live Insights'],['opportunities','Procurement'],['notifications','Notifications']].map(([id,label])=><button key={id} onClick={()=>go(id)}><span><ModernIcon name={id}/></span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Real business opportunities" subtitle="Public National Treasury procurement records, matched to your business industry and province."><p className="sd-muted">{publicFeed?.records?.length?`${publicFeed.records.length} published OCDS records cached from ${publicFeed.fetchedAt?.slice(0,10)||'a previous fetch'}. Check the source and deadline before applying.`:'No official records saved yet. Connect to the internet and fetch the latest source data.'}</p><Btn onClick={()=>go('opportunities')}>Explore Treasury opportunities →</Btn></Pane>
-    <p className="sd-footnote">{workspace==='cloud'?'Your account records are cached on this device and synchronise when connectivity returns.':'Business records are stored on this device until you sign in and explicitly import them.'} Sample records are fictional. Live Insights fetches public weather, currency and economic information when available; it does not connect to banks or CIPC records. The Procurement tab can fetch National Treasury OCDS data. Business Compliance tracks self-reported official portal reviews, not authoritative government verification.</p>
+    <p className="sd-footnote">{workspace==='cloud'?'Your account records are cached on this device and synchronise when connectivity returns.':'Business records are stored on this device until you sign in and explicitly import them.'} Sample records are fictional. Live Insights fetches public weather, currency and economic information when available; it does not connect to banks or CIPC records. The Procurement tab can fetch National Treasury OCDS data. The verification demo uses fictional sample records and does not establish real company registration.</p>
    </>}
    {!createBusiness&&page==='journey'&&<>
     <div className="sd-heading"><small>PERSONALISED BUSINESS JOURNEY</small><h1>Where do you want to go?</h1><p>Your progress updates automatically from the records you save.</p></div>
-    <div className="sd-goals">{[['start','🚀','Start a business'],['manage','💳','Manage money'],['grow','📈','Grow customers'],['protect','🛡️','Stay protected']].map(([id,icon,label])=><button key={id} className={selectedGoal===id?'active':''} onClick={()=>setGoal(id)}><span>{icon}</span>{label}</button>)}</div>
+    <div className="sd-goals">{[['start','journey','Start a business'],['manage','money','Manage money'],['grow','insights','Grow customers'],['protect','compliance','Stay protected']].map(([id,icon,label])=><button key={id} className={selectedGoal===id?'active':''} onClick={()=>setGoal(id)}><span><ModernIcon name={icon} size={21}/></span>{label}</button>)}</div>
     <Pane title={`Your journey · ${j.completed}/${j.total} steps`} subtitle={`Showing ${selectedGoal} goal priorities first · ${Math.round(j.completed/j.total*100)}% complete · Readiness ${p.score}/100 (illustrative)`}>
       <div className="sd-progress"><span style={{width:`${j.completed/j.total*100}%`}}/></div>
       <div className="sd-steps">{goalSteps.map(s=><div key={s.id} className="sd-step"><span className={s.done?'complete':''}>{s.done?'✓':'○'}</span><div><b>{s.label}</b><p>{s.why}</p></div><button onClick={()=>go(s.page)}>{s.done?'Review':'Open'} ↗</button></div>)}</div>
@@ -170,42 +203,55 @@ export default function StandaloneApp({onExit=noop}){
     </form></Pane>
     <Pane title="Your invoices">{current.invoices.map(i=><div className="sd-invoice" key={i.id}><div><b>{i.number} · {i.customer}</b><p>{i.description} {i.sample?'· SAMPLE':''}</p><small>{i.status==='paid'?'Paid (simulated)':'Unpaid'} · {currency(i.amount)}</small></div>{i.status!=='paid'&&<Btn light onClick={()=>pay(i.id)}>Simulate paid</Btn>}</div>)}{!current.invoices.length&&<Empty>No invoices yet.</Empty>}</Pane>
    </>}
-   {!createBusiness&&page==='intelligence'&&<BusinessIntelligence business={current} workspace={workspace} accountEmail={cloudUser?.email} onNavigate={go} onSaveGoals={settings=>patchBusiness(b=>({...b,insightSettings:settings}),'Intelligence goals saved to this business.')} />}
+   {!createBusiness&&page==='assistant'&&<BusinessAssistant business={current} onNavigate={go} onSaveGoals={settings=>patchBusiness(b=>({...b,insightSettings:settings}),'Monthly goals saved.')} />}
    {!createBusiness&&page==='passport'&&<>
     <div className="sd-heading"><small>GROWTH PASSPORT</small><h1>See how you're progressing.</h1><p>Automatic recorded actions are kept separate from self-declared external evidence.</p></div>
     <section className="sd-score"><div className="sd-bigscore">{p.score}<span>/100</span></div><div><b>{p.autoPoints}/60 from saved activity</b><p>{p.documentPoints}/40 from external document declarations</p></div><div className="sd-progress"><span style={{width:`${p.score}%`}}/></div><small>{p.disclaimer}</small></section>
     <Pane title="Automatic milestones" subtitle="No ticking required. They change when your records change."><div className="sd-steps">{p.automatic.map(s=><div key={s.id} className="sd-step"><span className={s.complete?'complete':''}>{s.complete?'✓':'○'}</span><div><b>{s.label}</b><p>{s.complete?'Detected from local records':'Not yet detected'}</p></div><b>{s.complete?s.points:0}/{s.points}</b></div>)}</div></Pane>
-    <Pane title="External documents (self-declared)" subtitle="Only tick documents you really have. No CIPC, SARS or bank verification is performed."><div className="sd-actions"><Btn light onClick={()=>go('compliance')}>Review official compliance steps →</Btn></div>{p.manual.map(d=><label key={d.id} className="sd-checkrow"><input type="checkbox" checked={d.completed} onChange={e=>patchBusiness(b=>({...b,documents:{...b.documents,[d.id]:e.target.checked}}),'Document declaration updated.')}/><span>{d.name}</span><b>{d.completed?'+10':'0'}</b></label>)}</Pane>
+    <Pane title="External documents (self-declared)" subtitle="Only tick documents you really have. No CIPC, SARS or bank verification is performed."><div className="sd-actions"><Btn light onClick={()=>go('compliance')}>Open verification demo →</Btn></div>{p.manual.map(d=><label key={d.id} className="sd-checkrow"><input type="checkbox" checked={d.completed} onChange={e=>patchBusiness(b=>({...b,documents:{...b.documents,[d.id]:e.target.checked}}),'Document declaration updated.')}/><span>{d.name}</span><b>{d.completed?'+10':'0'}</b></label>)}</Pane>
    </>}
    {!createBusiness&&page==='compliance'&&<ComplianceHub business={current} onChange={patchBusiness}/>}
    {!createBusiness&&page==='business'&&<><div className="sd-heading"><small>BUSINESS PROFILE</small><h1>Every business is different.</h1><p>Personalise SmartGrowth for your type of business, from a spaza shop to a software studio.</p></div>
     <Pane title={current.name} subtitle={`${current.industry} · ${current.region}`}><p>{current.description||'Add a description to your profile.'}</p><div className="sd-actions"><Btn onClick={()=>setEditBusiness(!editBusiness)}>{editBusiness?'Close':'Edit profile'}</Btn><Btn light onClick={()=>setCreateBusiness(true)}>Add another business</Btn></div>{editBusiness&&<BusinessForm initial={current} onSave={edit} onCancel={()=>setEditBusiness(false)}/>}</Pane>
-    <Pane title="Official registration guidance" subtitle="You can now track official registration steps in one place."><div className="sd-actions"><Btn onClick={()=>go('compliance')}>Open Business Compliance Hub →</Btn></div>{OFFICIAL_SOURCES.slice(0,3).map(s=><div className="sd-source" key={s.id}><div><b>{s.name}</b><p>{s.detail}</p></div><InlineLink href={s.url}>Open official site</InlineLink></div>)}</Pane>
+    <Pane title="Official registration guidance" subtitle="You can now track official registration steps in one place."><div className="sd-actions"><Btn onClick={()=>go('compliance')}>Open verification demo →</Btn></div>{OFFICIAL_SOURCES.slice(0,3).map(s=><div className="sd-source" key={s.id}><div><b>{s.name}</b><p>{s.detail}</p></div><InlineLink href={s.url}>Open official site</InlineLink></div>)}</Pane>
    </>}
    {!createBusiness&&page==='shield'&&<><div className="sd-heading"><small>SMARTSHIELD</small><h1>Spot the warning signs.</h1><p>Text-only rules, not an authoritative fraud verdict.</p></div><Pane title="Check a suspicious message"><form className="sd-form" onSubmit={e=>{e.preventDefault();setScan(fraudCheck(scanText));setNotice('Text screening completed locally.');}}><label>Paste a message<textarea rows={5} required minLength={3} maxLength={10000} value={scanText} onChange={e=>setScanText(e.target.value)} placeholder="Paste a suspicious funding, invoice or payment message…"/></label><Btn type="submit">Check this message</Btn></form></Pane>{scan&&<Pane title={scan.level}><div className="sd-steps">{scan.signals.length?scan.signals.map(s=><div key={s} className="sd-flag">⚠ {s}</div>):<p>No obvious signs were detected. This does not prove the message is safe.</p>}</div><p>{scan.recommendation}</p></Pane>}</>}
-   {!createBusiness&&page==='advisor'&&<><div className="sd-heading"><small>GROWTH ADVISOR</small><h1>Your next best actions.</h1><p>Simple explainable recommendations based only on locally saved data.</p></div><Pane title={guidance.summary} subtitle={guidance.note}><div className="sd-steps">{guidance.items.length?guidance.items.map((x,i)=><div className="sd-step" key={i}><span>{i+1}</span><div><b>{x.title}</b><p>{x.why}</p></div><button onClick={()=>go(x.page)}>Open →</button></div>):<Empty>All current milestones have been covered. Continue tracking sales and costs.</Empty>}</div></Pane></>}
+   {false&&!createBusiness&&page==='advisor'&&<><div className="sd-heading"><small>GROWTH ADVISOR</small><h1>Your next best actions.</h1><p>Simple explainable recommendations based only on locally saved data.</p></div><Pane title={guidance.summary} subtitle={guidance.note}><div className="sd-steps">{guidance.items.length?guidance.items.map((x,i)=><div className="sd-step" key={i}><span>{i+1}</span><div><b>{x.title}</b><p>{x.why}</p></div><button onClick={()=>go(x.page)}>Open →</button></div>):<Empty>All current milestones have been covered. Continue tracking sales and costs.</Empty>}</div></Pane></>}
    {!createBusiness&&page==='insights'&&<LiveInsights region={current.region} industry={current.industry}/>}
    {!createBusiness&&page==='opportunities'&&<><div className="sd-heading"><small>MARKET & PROCUREMENT ACCESS</small><h1>Find your next opportunity.</h1><p>Example briefs are fictional; official external portals may contain live opportunities.</p></div>
     <TreasuryOpportunities business={current}/>
     <Pane title="Live opportunity source" subtitle="Official source portal for checking full notices and submission requirements."><div className="sd-source"><div><b>National Treasury eTender Portal</b><p>Search published tenders by sector and region using the official website.</p></div><InlineLink href="https://www.etenders.gov.za/">Open live portal</InlineLink></div><Btn light onClick={()=>patchBusiness(b=>({...b,reviewedOpportunities:true}),'Opportunity source marked reviewed.')}>{current.reviewedOpportunities?'✓ Reviewed':'Mark opportunity search reviewed'}</Btn></Pane>
     <Pane title="Fictional procurement practice briefs" subtitle={`Ranked by industry and province for ${current.name}. These are NOT real tenders.`}><div className="sd-catalog">{opportunities.slice(0,8).map(o=><div className="sd-catalogitem" key={o.id}><span className="sd-label">SAMPLE BRIEF · {o.score}/100 similarity</span><h3>{o.title}</h3><p>{o.description}</p><small>{o.industry} · {o.region} · Sample budget {currency(o.value)}</small></div>)}</div></Pane>
    </>}
-   {!createBusiness&&page==='market'&&<><div className="sd-heading"><small>MARKET LINKS</small><h1>Show what you offer.</h1><p>On-device listings are not publicly published. Use them to prepare for customer discovery.</p></div>
-    <Pane title="Create an offer"><form className="sd-form" onSubmit={e=>{e.preventDefault();const amount=Number(listing.price);if(!listing.name.trim()||!listing.description.trim()||!Number.isFinite(amount)||amount<=0){setError('Provide a service name, description and positive price.');return;}patchBusiness(b=>({...b,listings:[{id:`list-${Date.now()}`,name:listing.name,description:listing.description,price:amount,createdAt:new Date().toISOString(),sample:false},...b.listings]}),'Local business listing created.');setListing({name:'',description:'',price:''});}}><label>Product / service<input required maxLength={90} value={listing.name} onChange={e=>setListing({...listing,name:e.target.value})}/></label><label>Description<textarea required rows={3} maxLength={500} value={listing.description} onChange={e=>setListing({...listing,description:e.target.value})}/></label><label>Starting price (ZAR)<input required type="number" min="0.01" step="0.01" value={listing.price} onChange={e=>setListing({...listing,price:e.target.value})}/></label><Btn type="submit">Save listing on device</Btn></form></Pane>
-    <Pane title="Your listings">{current.listings.map(x=><div className="sd-invoice" key={x.id}><div><b>{x.name}</b><p>{x.description}</p><small>From {currency(x.price)} · On-device only</small></div></div>)}{!current.listings.length&&<Empty>No listings created yet.</Empty>}</Pane>
+   {!createBusiness&&page==='market'&&<><div className="sd-heading"><small>SHARED MARKETPLACE</small><h1>Find and publish offers.</h1><p>Manage your own listings privately. Publish only when you want signed-in SmartGrowth users to see an offer.</p></div>
+    <Pane title="Create your offer"><form className="sd-form" onSubmit={e=>{e.preventDefault();const amount=Number(listing.price);if(!listing.name.trim()||!listing.description.trim()||!Number.isFinite(amount)||amount<=0){setError('Provide an offer name, description and positive price.');return;}patchBusiness(b=>({...b,listings:[{id:`list-${Date.now()}`,name:listing.name,description:listing.description,price:amount,createdAt:new Date().toISOString(),sample:false},...b.listings]}),'Private business listing saved. You can choose to publish it.');setListing({name:'',description:'',price:''});}}><label>Product / service<input required maxLength={90} value={listing.name} onChange={e=>setListing({...listing,name:e.target.value})}/></label><label>Description<textarea required rows={3} maxLength={500} value={listing.description} onChange={e=>setListing({...listing,description:e.target.value})}/></label><label>Starting price (ZAR)<input required type="number" min="0.01" max="100000000" step="0.01" value={listing.price} onChange={e=>setListing({...listing,price:e.target.value})}/></label><Btn type="submit">Save private listing</Btn></form></Pane>
+    <Pane title={`${current.name} — your listings`} subtitle="Publishing is optional and requires a signed-in Firebase account.">
+    {(current.listings||[]).map(x=>{const published=publicListings.some(row=>row.id===`${cloudUid}_${x.id}`);return <div className="sd-invoice" key={x.id}><div><b>{x.name}</b><p>{x.description}</p><small>From {currency(x.price)} · {published?'Published to shared marketplace':'Private listing'}</small></div><div className="sd-actions">{published?<Btn light disabled={publishingId===x.id} onClick={()=>unpublishListing(x)}>Unpublish</Btn>:<Btn disabled={publishingId===x.id||!cloudUid||workspace!=='cloud'} onClick={()=>publishListing(x)}>Publish</Btn>}</div></div>})}
+    {!current.listings?.length&&<Empty>No offers recorded for this business.</Empty>}</Pane>
+    <Pane title="Other businesses in your workspace" subtitle="Offers saved in your own account are visible here even before public publishing.">
+      {state.businesses.filter(b=>b.id!==current.id).flatMap(b=>(b.listings||[]).map(x=>({...x,businessName:b.name,businessId:b.id}))).map(x=><div className="sd-invoice" key={`${x.businessId}-${x.id}`}><div><b>{x.name}</b><p>{x.description}</p><small>From {currency(x.price)} · {x.businessName} · Private to this workspace</small></div></div>)}
+      {!state.businesses.some(b=>b.id!==current.id&&b.listings?.length>0)&&<Empty>No listings from other businesses in this workspace yet.</Empty>}
+    </Pane>
+    <Pane title="Explore other businesses" subtitle="Common published market across signed-in SmartGrowth accounts. No private finances are shared.">
+      {marketError&&<p className="sd-treasury-note" role="status">{marketError} Check Firebase deployment and marketplace security rules.</p>}
+      {!cloudUid&&<p className="sd-muted">Sign in with Firebase under More to browse offers published by other accounts. Your private listings remain available offline.</p>}
+      {cloudUid&&publicListings.length===0&&<Empty>No published offers available yet. Ask another test account to publish an offer and check again.</Empty>}
+      {cloudUid&&publicListings.filter(x=>x.ownerUid!==cloudUid).map(x=><div className="sd-invoice" key={x.id}><div><b>{x.name}</b><p>{x.description}</p><small>Offered by {x.businessName} · {x.industry}, {x.region} · From {currency(x.price)}</small></div></div>)}
+    </Pane>
    </>}
+   {!createBusiness&&page==='notifications'&&<NotificationsCentre items={alerts} seen={seenNotifications} onMarkRead={markSeen} onOpen={go}/>}
    {!createBusiness&&page==='sources'&&<><div className="sd-heading"><small>OFFICIAL RESOURCES</small><h1>Trusted places to start.</h1><p>These are real official websites. Opening them requires connectivity, and their information can change.</p></div><Pane title="South African business resources">{OFFICIAL_SOURCES.map(x=><div className="sd-source" key={x.id}><div><span className="sd-label">{x.category}</span><b>{x.name}</b><p>{x.detail}</p></div><InlineLink href={x.url}>Visit</InlineLink></div>)}</Pane><p className="sd-footnote">Official links verified in October 2026. SmartGrowth supports self-reported portal reviews but does not independently verify registration or tax status; procurement records fetched from National Treasury must be checked against their original notices.</p></>}
    {!createBusiness&&page==='more'&&<><div className="sd-heading"><small>WORKSPACE & SETTINGS</small><h1>Make SmartGrowth yours.</h1><p>Choose tools, switch businesses or back up your on-device data.</p></div>
-    <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','▣','My businesses'],['compliance','✓','Business compliance'],['invoices','▤','Invoices'],['intelligence','✦','My Intelligence'],['advisor','✧','Growth Advisor'],['shield','♢','SmartShield'],['market','▢','Market Links'],['insights','◉','Live Insights'],['opportunities','◇','Procurement'],['sources','↗','Official Sources']].map(([id,icon,label])=><button onClick={()=>go(id)} key={id}><span>{icon}</span>{label}<b>↗</b></button>)}</div></Pane>
+    <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','My businesses'],['compliance','Verify Business'],['invoices','Invoices'],['assistant','Ask SmartGrowth'],['shield','SmartShield'],['market','Market Links'],['insights','Live Insights'],['opportunities','Procurement'],['notifications','Notifications'],['sources','Official Sources']].map(([id,label])=><button onClick={()=>go(id)} key={id}><span><ModernIcon name={id}/></span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Add or switch businesses" subtitle="Every business has its own finances, invoices, Passport and Journey."><div className="sd-businesslist">{state.businesses.map(b=><button key={b.id} className={b.id===current.id?'current':''} onClick={()=>{update(s=>({...s,activeId:b.id}));go('home')}}>{b.name} <small>{b.industry} · {b.region}</small></button>)}</div><Btn light onClick={()=>setCreateBusiness(true)}>+ Create another business</Btn></Pane>
-    <Pane title="App version" subtitle="Check this after updating your website or Android APK."><p className="sd-muted"><strong>SmartGrowth v1.2.0 · Business Compliance Guidance</strong> — Adds business-specific CIPC, SARS and CSD guidance, status tracking and automatic format checks. No live CIPC verification yet.</p><p className="sd-muted">Website and Android must be updated separately. Your Firestore data remains in your existing Firebase project.</p></Pane>
+    <Pane title="App version" subtitle="Check this after updating your website or Android APK."><p className="sd-muted"><strong>SmartGrowth v1.2.1 · Team Refinement</strong> — Shared opt-in marketplace, demo-only registry checks, application FAQ assistant, notifications and login-home navigation. CIPC verification is simulated.</p><p className="sd-muted">Website and Android must be updated separately. Your Firestore data remains in your existing Firebase project.</p></Pane>
     <Pane title="Backup and device privacy" subtitle={workspace==='cloud'?'This account is cached locally and synchronises when online.':'Your offline records stay on this device until you explicitly import them into an account.'}><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div><div className="sd-actions"><Btn light onClick={()=>{setNotice('SmartGrowth is already running independently. You can close the app whenever you like.');}}>About offline use</Btn></div></Pane>
     {workspace==='device'&&cloudUid&&<Pane title="Your cloud workspace"><p>You are signed into {cloudUser.email} but viewing device-only records.</p><Btn onClick={openCloud}>Open my account records →</Btn></Pane>}
-    <CloudSyncPanel user={cloudUser} status={cloudStatus} workspace={workspace} onImport={importLocalToAccount} onOpenDevice={openDevice} onOpenCloud={openCloud}/>
+    <CloudSyncPanel user={cloudUser} status={cloudStatus} workspace={workspace} onImport={importLocalToAccount} onOpenDevice={openDevice} onOpenCloud={openCloud} onSignedIn={()=>{setPage('home');setCreateBusiness(false);}}/>
 
    </>}
-   <div className="sd-disclaimer">SMARTGROWTH · OFFLINE-FIRST BUSINESS WORKSPACE · No real payments or official registration verification. Cloud syncing requires a configured Firebase project and an initial online sign-in. Procurement records can be fetched from National Treasury when online, then saved for offline review. <InlineLink href={taxSource.url}>Tax guidance</InlineLink></div>
+   <div className="sd-disclaimer">SMARTGROWTH · OFFLINE-FIRST BUSINESS WORKSPACE · No real payments or official registration verification; demo registry matches are fictional. Cloud syncing requires a configured Firebase project and an initial online sign-in. Procurement records can be fetched from National Treasury when online, then saved for offline review. <InlineLink href={taxSource.url}>Tax guidance</InlineLink></div>
   </div>
-  <nav className="sd-bottom" aria-label="Standalone main navigation">{NAV.map(([id,icon,name])=><button key={id} aria-current={page===id?'page':undefined} className={page===id?'active':''} onClick={()=>go(id)}><span>{icon}</span><small>{name}</small></button>)}</nav>
+  <nav className="sd-bottom" aria-label="Standalone main navigation">{NAV.map(([id,name])=><button key={id} aria-current={page===id?'page':undefined} className={page===id?'active':''} onClick={()=>go(id)}><span><ModernIcon name={id} size={22}/></span><small>{name}</small></button>)}</nav>
  </div>;
 }

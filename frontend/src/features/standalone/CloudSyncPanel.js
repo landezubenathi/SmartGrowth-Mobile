@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
 import {firebaseConfigured,accountLogin,accountLogout,resetPassword} from './cloud-firebase';
-export default function CloudSyncPanel({user,status,workspace,onImport,onOpenDevice,onOpenCloud}){
+export default function CloudSyncPanel({user,status,workspace,onImport,onOpenDevice,onOpenCloud,onSignedIn}){
  const [email,setEmail]=useState('');
  const [password,setPassword]=useState('');
  const [register,setRegister]=useState(false);
@@ -9,7 +9,7 @@ export default function CloudSyncPanel({user,status,workspace,onImport,onOpenDev
  const [message,setMessage]=useState('');
  const submit=async e=>{
   e.preventDefault();setBusy(true);setError('');setMessage('');
-  try {await accountLogin(email,password,register);setPassword('');setMessage('Account opened. Your private workspace will load automatically.');}
+  try {await accountLogin(email,password,register);setPassword('');setMessage('Account opened. Redirecting to Home…');onSignedIn?.();}
   catch(e){setError(e?.message||'Sign-in failed.');}
   finally{setBusy(false);}
  };

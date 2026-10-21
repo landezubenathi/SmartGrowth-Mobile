@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ownsWorkspace(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validBusiness(uid, businessId) {
+      let data = request.resource.data;
+      return data.keys().hasAll(['payload', 'ownerUid', 'modifiedAt'])
+        && data.keys().hasOnly(['payload', 'ownerUid', 'modifiedAt'])
+        && data.ownerUid == uid
+        && data.modifiedAt is string
+        && data.payload is map
+        && data.payload.keys().hasAll(['id', 'name'])
+        && data.payload.id == businessId
+        && data.payload.name is string;
+    }
+
+    match /users/{uid}/businesses/{businessId} {
+      allow get, list: if ownsWorkspace(uid);
+      allow create: if ownsWorkspace(uid) && validBusiness(uid, businessId);
+      allow update: if ownsWorkspace(uid)
+        && resource.data.ownerUid == uid
+        && validBusiness(uid, businessId);
+      allow delete: if false;
+    }
+
+    // Marketplace is opt-in. Public records contain only allowed presentation fields.
+    // Do not ever publish /users/{uid}/businesses private payloads.
+    match /marketListings/{listingId} {
+      allow read: if request.auth != null;
+      function validListing() {
+        let d = request.resource.data;
+        return request.auth != null
+          && d.keys().hasAll(['ownerUid','businessId','businessName','industry','region','name','description','price','published','createdAt'])
+          && d.keys().hasOnly(['ownerUid','businessId','businessName','industry','region','name','description','price','published','createdAt'])
+          && d.ownerUid == request.auth.uid
+          && listingId.matches('^' + request.auth.uid + '_[A-Za-z0-9_-]{3,150}$')
+          && d.businessId is string && d.businessId.size() <= 150
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId)).data.payload.name == d.businessName
+          && d.businessName is string && d.businessName.size() > 0 && d.businessName.size() <= 90
+          && d.industry is string && d.industry.size() <= 60
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId)).data.payload.industry == d.industry
+          && d.region is string && d.region.size() <= 60
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId)).data.payload.region == d.region
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 90
+          && d.description is string && d.description.size() > 0 && d.description.size() <= 500
+          && d.price is number && d.price > 0 && d.price <= 100000000
+          && d.published == true && d.createdAt is string && d.createdAt.size() <= 32;
+      }
+      allow create: if validListing();
+      allow update: if validListing() && resource.data.ownerUid == request.auth.uid
+        && resource.data.businessId == request.resource.data.businessId;
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // All other paths remain denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
