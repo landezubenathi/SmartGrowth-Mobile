@@ -33,3 +33,8 @@
 .sg-registry-result.demo-match{background:#eaf5e4;border-color:#a9d3b4}.sg-registry-result.no-match{background:#fff8eb;border-color:#ead6b0}
 .sg-registry-result p{margin:6px 0;font-weight:500;color:#395648}.sg-registry-result small{color:#667c6e}
 .sd-businessbar span.sg-demo-status{font-size:10px}
+
+.sd-shortcuts svg,.sd-goals svg,.sd-bottom svg,.sd-nexticon svg{display:inline-block;vertical-align:middle;flex-shrink:0}
+.sd-mode{display:flex;align-items:center;gap:5px}
+.sd-goals button span,.sd-shortcuts button span,.sd-bottom button span{display:inline-flex;align-items:center;justify-content:center}
+.sd-goals button span{color:inherit}

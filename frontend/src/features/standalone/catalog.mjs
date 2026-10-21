@@ -1,16 +1,16 @@
 // Static, fictional sample catalogue. These are NOT tenders, grants or verified suppliers.
 export const INDUSTRIES = [
-  {id:'Catering',icon:'🍲',example:'Community catering',sale:'Lunch packages',expense:'Ingredients'},
-  {id:'Retail',icon:'🛒',example:'Neighbourhood shop',sale:'Daily retail sales',expense:'Stock purchases'},
-  {id:'Agriculture',icon:'🌱',example:'Fresh produce business',sale:'Vegetable orders',expense:'Seeds and transport'},
-  {id:'Construction',icon:'🧱',example:'Building and maintenance',sale:'Repair contract',expense:'Materials'},
-  {id:'Technology',icon:'💻',example:'Digital services studio',sale:'Website delivery',expense:'Internet and hosting'},
-  {id:'Services',icon:'🛠️',example:'Cleaning and repairs',sale:'Monthly service',expense:'Equipment'},
-  {id:'Manufacturing',icon:'🏭',example:'Small maker business',sale:'Product orders',expense:'Raw materials'},
-  {id:'Beauty & Wellness',icon:'✂️',example:'Hair and beauty studio',sale:'Hair appointments',expense:'Products and supplies'},
-  {id:'Transport',icon:'🚚',example:'Delivery service',sale:'Delivery jobs',expense:'Fuel'},
-  {id:'Education',icon:'📚',example:'Tutoring centre',sale:'Tutoring sessions',expense:'Teaching materials'},
-  {id:'Other',icon:'✨',example:'My own business',sale:'Customer order',expense:'Operating costs'}
+  {id:'Catering',icon:'catering',example:'Community catering',sale:'Lunch packages',expense:'Ingredients'},
+  {id:'Retail',icon:'retail',example:'Neighbourhood shop',sale:'Daily retail sales',expense:'Stock purchases'},
+  {id:'Agriculture',icon:'agriculture',example:'Fresh produce business',sale:'Vegetable orders',expense:'Seeds and transport'},
+  {id:'Construction',icon:'construction',example:'Building and maintenance',sale:'Repair contract',expense:'Materials'},
+  {id:'Technology',icon:'technology',example:'Digital services studio',sale:'Website delivery',expense:'Internet and hosting'},
+  {id:'Services',icon:'services',example:'Cleaning and repairs',sale:'Monthly service',expense:'Equipment'},
+  {id:'Manufacturing',icon:'manufacturing',example:'Small maker business',sale:'Product orders',expense:'Raw materials'},
+  {id:'Beauty & Wellness',icon:'beauty',example:'Hair and beauty studio',sale:'Hair appointments',expense:'Products and supplies'},
+  {id:'Transport',icon:'transport',example:'Delivery service',sale:'Delivery jobs',expense:'Fuel'},
+  {id:'Education',icon:'education',example:'Tutoring centre',sale:'Tutoring sessions',expense:'Teaching materials'},
+  {id:'Other',icon:'other',example:'My own business',sale:'Customer order',expense:'Operating costs'}
 ];
 export const PROVINCES = ['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','North West','Northern Cape','Western Cape'];
 export const OFFICIAL_SOURCES = [
@@ -21,9 +21,9 @@ export const OFFICIAL_SOURCES = [
 ];
 export const DEMO_OPPORTUNITIES = INDUSTRIES.filter(i=>i.id!=='Other').map((i,index)=>({
  id:`SAMPLE-${String(index+1).padStart(3,'0')}`,industry:i.id,
- title:`Example request for ${i.sale.toLowerCase()}`,buyer:'Fictional Community Enterprise Hub',
+ title:`${i.sale} services`,buyer:'Fictional Community Enterprise Hub',
  value:5000+(index+1)*3200,region:PROVINCES[index%PROVINCES.length],
- description:`Practice brief only: prepare a quotation for ${i.sale.toLowerCase()}. This is NOT a published tender.`,sample:true
+ description:`Prepare a quotation outlining the scope, pricing, delivery schedule and applicable requirements for ${i.sale.toLowerCase()}.`,sample:true
 }));
 export const DOC_ITEMS = [
  {id:'registration',name:'Registration evidence, if applicable',url:OFFICIAL_SOURCES[0].url},
