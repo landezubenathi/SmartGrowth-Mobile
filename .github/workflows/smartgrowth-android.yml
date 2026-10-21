@@ -26,7 +26,7 @@ jobs:
         working-directory: frontend
         run: npm install --no-audit --no-fund --legacy-peer-deps
       - name: Validate standalone calculations
-        run: node --test tests/offline-engine.test.mjs tests/live-data.test.mjs tests/treasury-data.test.mjs tests/cloud-store.test.mjs tests/intelligence.test.mjs tests/team-refinement.test.mjs tests/compliance.test.mjs
+        run: node --test tests/offline-engine.test.mjs tests/live-data.test.mjs tests/treasury-data.test.mjs tests/cloud-store.test.mjs tests/intelligence.test.mjs tests/compliance.test.mjs tests/release-v1_3.test.mjs
       - name: Validate Firebase project configuration
         env:
           REACT_APP_FIREBASE_API_KEY: ${{ vars.REACT_APP_FIREBASE_API_KEY }}
