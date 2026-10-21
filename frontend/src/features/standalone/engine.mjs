@@ -22,6 +22,16 @@ export function passport(b){
  return {score:autoPoints+documentPoints,autoPoints,documentPoints,automatic,manual,financials:f,
  disclaimer:'Illustrative, unverified readiness indicator. Not a credit score, official compliance check or promise of funding.'};
 }
+export function protectionJourney(b){
+ const scans=Number(b.security?.scans||0),risk=Number(b.security?.highRiskScans||0);
+ const steps=[
+  {id:'scan',label:'Screen a suspicious message',done:scans>0,page:'shield',why:'Use SmartShield to examine a message and understand its warning signs.'},
+  {id:'security',label:'Review fraud prevention tips',done:Boolean(b.security?.reviewedTips),page:'shield',why:'Learn why OTPs, urgent fees and unfamiliar payment links are risky.'},
+  {id:'contact',label:'Check an organisation through its official channel',done:Boolean(b.security?.reviewedContacts),page:'shield',why:'Confirm funding offers and supplier contact details independently.'},
+  {id:'followup',label:'Review flagged risks and next steps',done:scans>0 && Boolean(b.security?.reviewedScans),page:'shield',why:risk>0?`${risk} scan(s) raised multiple warning signs. Review your response before acting.`:'Review the screening result, even if no obvious warning was found.'}
+ ];
+ return {steps,completed:steps.filter(i=>i.done).length,total:steps.length,next:steps.find(i=>!i.done)};
+}
 export function journey(b){
  const pass=passport(b),inv=b.invoices||[];
  const activities=[

@@ -1,6 +1,7 @@
 import React,{useMemo,useState} from 'react';
 import {analyzeBusiness,answerBusinessQuestion,intelligenceReport,validateInsightSettings} from './intelligence.mjs';
 import {currency} from './engine.mjs';
+import SmartIcon from './SmartIcon';
 import './intelligence.css';
 
 const percent=value=>value===null?'Not enough comparison data':`${value>0?'+':''}${value.toFixed(0)}% vs previous 30 days`;
@@ -35,7 +36,7 @@ export default function BusinessIntelligence({business,workspace,accountEmail,on
  }
  return <div className="sg-int-page">
   <div className="sd-heading"><small>PERSONALISED BUSINESS INTELLIGENCE</small><h1>Your business, explained.</h1><p>Real insights from the selected business's saved records, with clear reasons and practical next steps.</p></div>
-  <div className="sg-int-identity"><span>◉ {workspace==='cloud'?'PRIVATE CLOUD WORKSPACE':'DEVICE WORKSPACE'}</span><b>{business.name}</b><small>{workspace==='cloud'&&accountEmail?`Signed in: ${accountEmail} · `:''}{business.industry} · {business.region}</small></div>
+  <div className="sg-int-identity"><span><SmartIcon name="intelligence" size={14}/> {workspace==='cloud'?'PRIVATE CLOUD WORKSPACE':'DEVICE WORKSPACE'}</span><b>{business.name}</b><small>{workspace==='cloud'&&accountEmail?`Signed in: ${accountEmail} · `:''}{business.industry} · {business.region}</small></div>
   <div className="sg-int-hero">
    <div><span>LAST 30 DAYS</span><h2>{currency(current.surplus)}</h2><p>Recorded operating surplus</p><small>Income minus expenses entered into SmartGrowth—not a bank balance.</small></div>
    <div className="sg-int-hero-score"><strong>{intelligence.passportScore}<small>/100</small></strong><span>Growth Passport</span></div>
@@ -45,7 +46,7 @@ export default function BusinessIntelligence({business,workspace,accountEmail,on
    <div><span>Recorded expenses</span><strong>{currency(current.expenses)}</strong><small>{percent(comparison.expenseChange)}</small></div>
    <div><span>Unpaid invoices</span><strong>{currency(invoices.outstanding)}</strong><small>{invoices.unpaidCount} unpaid · {invoices.overdueCount} overdue</small></div>
   </div>
-  <section className="sd-panel sg-int-section"><div className="sd-panelhead"><h2>Ask your business data</h2><p>Tap a question for a locally calculated answer—not a chatbot or external AI service.</p></div>
+  <section className="sd-panel sg-int-section"><div className="sd-panelhead"><h2>Ask your business data</h2><p>Tap a question to understand your business records, or open the assistant for more help.</p></div>
    <div className="sg-int-questions">{[['next','What should I do next?'],['performance','How is my business doing?'],['expenses','Where am I spending most?'],['payments','Who still owes me?']].map(([id,label])=><button type="button" key={id} className={question===id?'selected':''} onClick={()=>setQuestion(id)}>{label}</button>)}</div>
    <div className="sg-int-answer" role="status"><span>SMARTGROWTH ANSWERS</span><p>{answerBusinessQuestion(business,question)}</p></div>
   </section>

@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {INDUSTRIES,PROVINCES,OFFICIAL_SOURCES} from './catalog.mjs';
-import {currency,financials,passport,journey,advice,blankBusiness,sampleBusiness,addTransaction,addInvoice,markInvoicePaid,fraudCheck,matches} from './engine.mjs';
+import {currency,financials,passport,journey,protectionJourney,advice,blankBusiness,sampleBusiness,addTransaction,addInvoice,markInvoicePaid,fraudCheck,matches} from './engine.mjs';
 import {loadState,saveState,exportState,parseBackup} from './storage.mjs';
 import LiveInsights from './LiveInsights';
 import TreasuryOpportunities from './TreasuryOpportunities';
@@ -14,10 +14,10 @@ import {demoRegistryMatch} from './demo-registry.mjs';
 import {complianceDetails} from './compliance.mjs';
 import {analyzeBusiness} from './intelligence.mjs';
 import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness} from './cloud-firebase';
-import {loadCloudState,saveCloudState,mergeState,importDeviceToCloud} from './cloud-store.mjs';
+import {loadCloudState,saveCloudState,mergeState} from './cloud-store.mjs';
+import SmartIcon from './SmartIcon';
 import './standalone.css';
-const NAV=[['home','⌂','Home'],['journey','◇','Journey'],['money','▤','Money'],['intelligence','✦','Insights'],['passport','◈','Passport'],['more','☷','More']];
-const noop=()=>{};
+const NAV=[['home','home','Home'],['journey','journey','Journey'],['money','money','Money'],['intelligence','intelligence','Insights'],['passport','passport','Passport'],['more','more','More']];
 const today=()=>new Date().toISOString().slice(0,10);
 function Pane({title,subtitle,children,className=''}){return <section className={'sd-panel '+className}><div className="sd-panelhead"><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{children}</section>}
 function Notice({children}){return <div className="sd-notice" role="status">{children}</div>}
@@ -32,7 +32,7 @@ const BusinessForm=({onSave,onCancel,initial=null})=>{
  const industryChoice=INDUSTRIES.some(i=>i.id===draft.industry)?draft.industry:'Custom';
  return <form className="sd-form" onSubmit={e=>{e.preventDefault();try{onSave({...draft,industry:industryChoice==='Custom'?custom.trim():draft.industry});}catch(err){setError(err.message);}}}>
   <label>Business name<input value={draft.name} required maxLength={90} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Khula Auto Repairs"/></label>
-  <label>Business type / industry<select value={industryChoice} onChange={e=>setDraft({...draft,industry:e.target.value})}>{INDUSTRIES.map(i=><option key={i.id} value={i.id}>{i.icon} {i.id}</option>)}<option value="Custom">My own industry…</option></select></label>
+  <label>Business type / industry<select value={industryChoice} onChange={e=>setDraft({...draft,industry:e.target.value})}>{INDUSTRIES.map(i=><option key={i.id} value={i.id}>{i.id}</option>)}<option value="Custom">My own industry…</option></select></label>
   {industryChoice==='Custom'&&<label>Describe your industry<input value={custom} required maxLength={60} onChange={e=>setCustom(e.target.value)} placeholder="e.g. Automotive repairs"/></label>}
   <label>Province<select value={draft.region} onChange={e=>setDraft({...draft,region:e.target.value})}>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></label>
   <label>Company registration number (only if applicable)<input value={draft.cipcNumber||''} maxLength={15} onChange={e=>setDraft({...draft,cipcNumber:e.target.value})} placeholder="Enter the number on your registration certificate"/><small>Enter the exact number. Demo checks are fictional; use CIPC for official confirmation.</small></label>
@@ -41,12 +41,12 @@ const BusinessForm=({onSave,onCancel,initial=null})=>{
   <div className="sd-actions"><Btn type="submit">Save business</Btn><Btn light onClick={onCancel}>Cancel</Btn></div>
  </form>;
 };
-export default function StandaloneApp({onExit=noop}){
+export default function StandaloneApp(){
  const [state,setState]=useState(loadState);
  const [page,setPage]=useState('home');
  const [cloudUser,setCloudUser]=useState(null);
  const [workspace,setWorkspace]=useState('device');
- const [cloudStatus,setCloudStatus]=useState('Device-only: works offline');
+ const [cloudStatus,setCloudStatus]=useState('Saved locally · sign in once for automatic cloud sync');
  const cloudUid=cloudUser?.uid||null;
  const [notice,setNotice]=useState('');
  const [error,setError]=useState('');
@@ -66,8 +66,10 @@ export default function StandaloneApp({onExit=noop}){
  const intelligence=useMemo(()=>analyzeBusiness(current),[current]);
  const compliance=useMemo(()=>complianceDetails(current),[current]);
  const guidance=useMemo(()=>advice(current),[current]);
- const goalFocus={start:['profile','compliance'],manage:['sale','invoice','expenses'],grow:['opportunity','sale'],protect:['compliance','opportunity']};
- const goalSteps=[...j.steps].sort((a,b)=>Number(goalFocus[selectedGoal]?.includes(b.id))-Number(goalFocus[selectedGoal]?.includes(a.id)));
+ const goalFocus={start:['profile','compliance'],manage:['sale','invoice','expenses'],grow:['opportunity','sale']};
+ const protectedJourney=useMemo(()=>protectionJourney(current),[current]);
+ const activeJourney=selectedGoal==='protect'?protectedJourney:j;
+ const goalSteps=selectedGoal==='protect'?activeJourney.steps:[...j.steps].sort((a,b)=>Number(goalFocus[selectedGoal]?.includes(b.id))-Number(goalFocus[selectedGoal]?.includes(a.id)));
  const opportunities=useMemo(()=>matches(current),[current]);
  const publicFeed=readTreasuryCache();
  // Firebase silently restores a previously signed-in account, even on later offline opens.
@@ -75,7 +77,7 @@ export default function StandaloneApp({onExit=noop}){
   if(!firebaseConfigured)return;
   return observeLogin(user=>{
    if(user){setCloudUser(user);setWorkspace('cloud');setState(loadCloudState(user.uid));setCloudStatus(navigator.onLine?'Connecting to your cloud records…':'Offline — your account workspace is available on this device');}
-   else {setCloudUser(null);setWorkspace('device');setState(loadState());setCloudStatus('Device-only: works offline');}
+   else {setCloudUser(null);setWorkspace('device');setState(loadState());setCloudStatus('Saved locally · sign in to sync');}
   });
  },[]);
  useEffect(()=>{
@@ -106,55 +108,48 @@ export default function StandaloneApp({onExit=noop}){
   }else{setState(saveState(next));}
   setNotice(message||(workspace==='cloud'?'Saved to this account and queued for sync.':'Saved on this device.'));
  }catch(e){setError(e.message);}}
- function importLocalToAccount(){if(!cloudUid||workspace!=='cloud')return;
-  if(!window.confirm('Copy businesses from the separate device-only workspace into your signed-in account? This will not delete your device-only data.'))return;
-  update(current=>importDeviceToCloud(current,loadState()),'Device businesses copied into your cloud workspace and queued for sync.');
- }
- function openDevice(){setWorkspace('device');setState(loadState());setCloudStatus('Device-only mode. Cloud account remains signed in.');go('home');}
- function openCloud(){if(!cloudUid)return;setWorkspace('cloud');setState(loadCloudState(cloudUid));setCloudStatus('Restoring private cloud workspace…');go('home');}
-
  function patchBusiness(fn,message){update(old=>({...old,businesses:old.businesses.map(b=>b.id===current.id?fn(b):b)}),message)}
- function go(p){setPage(p);setError('');setNotice('');window.scrollTo?.(0,0)}
+ function go(p){setPage(p==='advisor'?'intelligence':p);setError('');setNotice('');window.scrollTo?.(0,0)}
  function create(d,withSamples=false){const b=withSamples?sampleBusiness(d.industry,d.region,d.name):blankBusiness(d.name,d.industry,d.region,d.description);
   if(d.description)b.description=d.description;
   if(d.cipcNumber?.trim())b.compliance={...b.compliance,structure:'registered_company',cipcNumber:d.cipcNumber.trim(),checks:{}};
   update(s=>({...s,activeId:b.id,businesses:[...s.businesses,b]}),withSamples?'Fictional example business created.':'Business created. Start recording real entries only if you wish.');setCreateBusiness(false);go('home');}
  function edit(d){patchBusiness(b=>({...b,name:d.name.trim(),industry:d.industry,region:d.region,description:d.description||'',compliance:{...b.compliance,cipcNumber:d.cipcNumber?.trim()||'',structure:d.cipcNumber?.trim()?'registered_company':b.compliance?.structure||'unsure',checks:d.cipcNumber?.trim()===b.compliance?.cipcNumber?b.compliance?.checks||{}:{}},isPlaceholder:false}),'Business profile updated.');setEditBusiness(false);}
- function pay(id){patchBusiness(b=>markInvoicePaid(b,id),'Demo payment recorded once. No real money moved.');}
+ function pay(id){patchBusiness(b=>markInvoicePaid(b,id),'Payment status updated and recorded in bookkeeping.');}
  async function restoreFile(e){const file=e.target.files?.[0];if(!file)return;try{if(file.size>6*1024*1024)throw Error('Backup file exceeds 6 MB.');
   const restored=parseBackup(await file.text());if(!window.confirm('Replace ALL standalone data on this device with this backup? Your current local records will be overwritten.'))return;
   if(workspace==='cloud'&&cloudUid){update(()=>restored,'Backup restored to cloud workspace; preparing to sync.');}else{setState(saveState(restored));setNotice('Backup restored from your file.');}setError('');go('home');}catch(err){setError(err.message);}finally{e.target.value='';}}
  function downloadBackup(){const raw=exportState(state);const blob=new Blob([raw],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`smartgrowth-device-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);setNotice('Backup downloaded. Keep the file somewhere secure.');}
  const taxSource=OFFICIAL_SOURCES.find(x=>x.id==='sars');
  return <div className="sd-shell">
-  <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><span className="sd-mode">{workspace==='cloud'?'☁ CLOUD + OFFLINE':'◉ DEVICE-FIRST'}</span></div></header>
+  <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><span className="sd-mode"><SmartIcon name={workspace==='cloud'?'cloud':'check'} size={15}/> {workspace==='cloud'?'SYNC ENABLED':'OFFLINE READY'}</span></div></header>
   <div className="sd-content">
-   <div className="sd-businessbar"><div><small>{workspace==='cloud'?'CLOUD WORKSPACE':'DEVICE WORKSPACE'}</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span><span className={demoRegistryMatch(current).status==='demo-match'?'sg-demo-status matched':'sg-demo-status'}>{demoRegistryMatch(current).status==='demo-match'?'✓ Demo registry match (not CIPC verified)':'CIPC status not officially verified'}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+   <div className="sd-businessbar"><div><small>{workspace==='cloud'?'MY BUSINESS':'MY WORKSPACE'}</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span><span className={demoRegistryMatch(current).status==='demo-match'?'sg-demo-status matched':'sg-demo-status'}>{demoRegistryMatch(current).status==='demo-match'?'Demo registry match · not CIPC verified':'CIPC status unverified'}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
    {notice&&<Notice>{notice} <button aria-label="Dismiss notice" onClick={()=>setNotice('')}>×</button></Notice>}
    {error&&<div className="sd-error" role="alert">{error}</div>}
    {createBusiness?<Pane title="Add another business" subtitle="Create a private business workspace using your own information."><BusinessForm onSave={d=>create(d,false)} onCancel={()=>setCreateBusiness(false)}/></Pane>:null}
    {!createBusiness&&page==='home'&&<>
     <section className="sd-hero"><div className="sd-eyebrow">SMARTGROWTH · FOUR HORSEMEN TECH</div><h1>Build your business.<br/><em>One step at a time.</em></h1><p>Manage your records, track readiness and discover your next action—even without an internet connection.</p><Btn onClick={()=>go('journey')}>Continue my journey →</Btn></section>
-    <div className="sd-kpis"><Kpi label="Recorded income" value={currency(f.income)}/><Kpi label="Recorded expenses" value={currency(f.expenses)}/><Kpi label="Operating surplus" value={currency(f.surplus)} note="From entered/demo records"/><Kpi label="Growth Passport" value={`${p.score}/100`} note="Unverified readiness"/></div>
+    <div className="sd-kpis"><Kpi label="Recorded income" value={currency(f.income)}/><Kpi label="Recorded expenses" value={currency(f.expenses)}/><Kpi label="Operating surplus" value={currency(f.surplus)} note="From saved records"/><Kpi label="Growth Passport" value={`${p.score}/100`} note="Business readiness"/></div>
     <Pane title="Your business intelligence" subtitle="Personalised to the selected business and updated from saved or synced records.">
-     <div className="sd-next"><span className="sd-nexticon">✦</span><div><b>{currency(intelligence.current.surplus)} recorded surplus in the last 30 days</b><p>{intelligence.actions.length?intelligence.actions[0].title:'Insights are ready.'} · {intelligence.invoices.unpaidCount} unpaid invoice(s). No bank verification.</p></div><Btn onClick={()=>go('intelligence')}>Explore →</Btn></div>
+     <div className="sd-next"><span className="sd-nexticon"><SmartIcon name="intelligence"/></span><div><b>{currency(intelligence.current.surplus)} recorded surplus in the last 30 days</b><p>{intelligence.actions.length?intelligence.actions[0].title:'Insights are ready.'} · {intelligence.invoices.unpaidCount} unpaid invoice(s). No bank verification.</p></div><Btn onClick={()=>go('intelligence')}>Explore →</Btn></div>
     </Pane>
-    <Pane title="Business compliance" subtitle="Track registration and tax guidance appropriate for your business."><div className="sd-next"><span className="sd-nexticon">✓</span><div><b>{compliance.done}/{compliance.total} preparation steps reviewed</b><p>Official records have not been independently verified.</p></div><Btn onClick={()=>go('compliance')}>Review →</Btn></div></Pane>
+    <Pane title="Business compliance" subtitle="Track registration and tax guidance appropriate for your business."><div className="sd-next"><span className="sd-nexticon"><SmartIcon name="compliance"/></span><div><b>{compliance.done}/{compliance.total} preparation steps reviewed</b><p>Official records have not been independently verified.</p></div><Btn onClick={()=>go('compliance')}>Review →</Btn></div></Pane>
     <Pane title="Your next step" subtitle="Detected automatically from this business's saved records.">
-     {j.next?<div className="sd-next"><span className="sd-nexticon">◇</span><div><b>{j.next.label}</b><p>{j.next.why}</p></div><Btn onClick={()=>go(j.next.page)}>Start →</Btn></div>:<p>All current journey milestones complete. Continue recording business activity.</p>}
+     {j.next?<div className="sd-next"><span className="sd-nexticon"><SmartIcon name="journey"/></span><div><b>{j.next.label}</b><p>{j.next.why}</p></div><Btn onClick={()=>go(j.next.page)}>Start →</Btn></div>:<p>All current journey milestones complete. Continue recording business activity.</p>}
     </Pane>
-    <Pane title="Quick actions"><div className="sd-shortcuts">{[['compliance','✓','Business compliance'],['money','➕','Record a sale'],['invoices','▤','New invoice'],['business','▣','Business profile'],['shield','♢','Check for scams'],['intelligence','✦','My Intelligence'],['insights','◉','Live Insights'],['advisor','✧','Growth advice'],['opportunities','◇','Find opportunities']].map(([id,icon,label])=><button key={id} onClick={()=>go(id)}><span>{icon}</span>{label}<b>↗</b></button>)}</div></Pane>
+    <Pane title="Quick actions"><div className="sd-shortcuts">{[['compliance','compliance','Business compliance'],['money','money','Record a sale'],['invoices','invoices','New invoice'],['business','business','Business profile'],['shield','shield','Check for scams'],['intelligence','intelligence','My Intelligence'],['insights','insights','Live Insights'],['opportunities','opportunities','Find opportunities']].map(([id,icon,label])=><button key={id} onClick={()=>go(id)}><span><SmartIcon name={icon}/></span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Real business opportunities" subtitle="Public National Treasury procurement records, matched to your business industry and province."><p className="sd-muted">{publicFeed?.records?.length?`${publicFeed.records.length} published OCDS records cached from ${publicFeed.fetchedAt?.slice(0,10)||'a previous fetch'}. Check the source and deadline before applying.`:'No official records saved yet. Connect to the internet and fetch the latest source data.'}</p><Btn onClick={()=>go('opportunities')}>Explore Treasury opportunities →</Btn></Pane>
-    <p className="sd-footnote">{workspace==='cloud'?'Your account records are cached on this device and synchronise when connectivity returns.':'Business records are stored on this device until you sign in and explicitly import them.'} Sample records are fictional. Live Insights fetches public weather, currency and economic information when available; it does not connect to banks or CIPC records. The Procurement tab can fetch National Treasury OCDS data. Business Compliance tracks self-reported official portal reviews, not authoritative government verification.</p>
+
    </>}
    {!createBusiness&&page==='journey'&&<>
     <div className="sd-heading"><small>PERSONALISED BUSINESS JOURNEY</small><h1>Where do you want to go?</h1><p>Your progress updates automatically from the records you save.</p></div>
-    <div className="sd-goals">{[['start','🚀','Start a business'],['manage','💳','Manage money'],['grow','📈','Grow customers'],['protect','🛡️','Stay protected']].map(([id,icon,label])=><button key={id} className={selectedGoal===id?'active':''} onClick={()=>setGoal(id)}><span>{icon}</span>{label}</button>)}</div>
-    <Pane title={`Your journey · ${j.completed}/${j.total} steps`} subtitle={`Showing ${selectedGoal} goal priorities first · ${Math.round(j.completed/j.total*100)}% complete · Readiness ${p.score}/100 (illustrative)`}>
-      <div className="sd-progress"><span style={{width:`${j.completed/j.total*100}%`}}/></div>
+    <div className="sd-goals">{[['start','start','Start a business'],['manage','manage','Manage money'],['grow','grow','Grow customers'],['protect','protect','Stay protected']].map(([id,icon,label])=><button key={id} className={selectedGoal===id?'active':''} onClick={()=>setGoal(id)}><span><SmartIcon name={icon}/></span>{label}</button>)}</div>
+    <Pane title={`${selectedGoal==='protect'?'Protection journey':'Your journey'} · ${activeJourney.completed}/${activeJourney.total} steps`} subtitle={selectedGoal==='protect'?`Fraud protection progress · ${Math.round(activeJourney.completed/activeJourney.total*100)}% complete`:`${Math.round(activeJourney.completed/activeJourney.total*100)}% complete · Business readiness ${p.score}/100`}>
+      <div className="sd-progress"><span style={{width:`${activeJourney.completed/activeJourney.total*100}%`}}/></div>
       <div className="sd-steps">{goalSteps.map(s=><div key={s.id} className="sd-step"><span className={s.done?'complete':''}>{s.done?'✓':'○'}</span><div><b>{s.label}</b><p>{s.why}</p></div><button onClick={()=>go(s.page)}>{s.done?'Review':'Open'} ↗</button></div>)}</div>
     </Pane>
-    <Pane title="Suggested focus" subtitle="A practical 30-day sprint based on this business."><div className="sd-steps">{guidance.items.slice(0,4).map((x,i)=><div className="sd-step" key={i}><span>{i+1}</span><div><b>{x.title}</b><p>{x.why}</p></div><button onClick={()=>go(x.page)}>Go →</button></div>)}</div></Pane>
+    {selectedGoal!=='protect'&&<Pane title="Suggested focus" subtitle="A practical 30-day sprint based on this business."><div className="sd-steps">{guidance.items.slice(0,4).map((x,i)=><div className="sd-step" key={i}><span>{i+1}</span><div><b>{x.title}</b><p>{x.why}</p></div><button onClick={()=>go(x.page)}>Go →</button></div>)}</div></Pane>}
    </>}
    {!createBusiness&&page==='money'&&<>
     <div className="sd-heading"><small>BOOKKEEPING</small><h1>Your money, clearly.</h1><p>Entries stay on this device; amounts you enter are not bank-verified.</p></div>
@@ -165,14 +160,14 @@ export default function StandaloneApp({onExit=noop}){
      <label>Category<input required maxLength={60} value={transaction.category} onChange={e=>setTransaction({...transaction,category:e.target.value})}/></label>
      <label>Description<input maxLength={240} value={transaction.description} onChange={e=>setTransaction({...transaction,description:e.target.value})}/></label><Btn type="submit">Save entry</Btn>
     </form></Pane>
-    <Pane title="Recent transactions" subtitle="Fictional sample entries are labelled SAMPLE.">{current.transactions.length?current.transactions.map(t=><div className="sd-record" key={t.id}><div><b>{t.description||t.category}</b><small>{t.category} · {t.created_at?.slice(0,10)} {t.sample?'· SAMPLE':''}</small></div><strong className={t.kind==='income'?'pos':'neg'}>{t.kind==='income'?'+':'−'}{currency(t.amount)}</strong></div>):<Empty>No transactions yet. Start with one sale or expense.</Empty>}</Pane>
+    <Pane title="Recent transactions" subtitle="Your saved income and expense records.">{current.transactions.length?current.transactions.map(t=><div className="sd-record" key={t.id}><div><b>{t.description||t.category}</b><small>{t.category} · {t.created_at?.slice(0,10)} {t.sample?'· SAMPLE':''}</small></div><strong className={t.kind==='income'?'pos':'neg'}>{t.kind==='income'?'+':'−'}{currency(t.amount)}</strong></div>):<Empty>No transactions yet. Start with one sale or expense.</Empty>}</Pane>
     <Pane title="What-if calculator" subtitle="Simple arithmetic only; it does not change any records."><label className="sd-range">Increase income by {scenario.revenue}%<input type="range" min="0" max="50" step="5" value={scenario.revenue} onChange={e=>setScenario({...scenario,revenue:Number(e.target.value)})}/></label><label className="sd-range">Reduce expenses by {scenario.costs}%<input type="range" min="0" max="30" step="5" value={scenario.costs} onChange={e=>setScenario({...scenario,costs:Number(e.target.value)})}/></label><b>Illustrative adjusted surplus: {currency(f.income*(1+scenario.revenue/100)-f.expenses*(1-scenario.costs/100))}</b></Pane>
    </>}
-   {!createBusiness&&page==='invoices'&&<><div className="sd-heading"><small>INVOICES & PAYMENTS</small><h1>Keep track of who owes you.</h1><p>Invoices and payment buttons are local demonstrations—not payment processing.</p></div>
+   {!createBusiness&&page==='invoices'&&<><div className="sd-heading"><small>INVOICES & PAYMENTS</small><h1>Keep track of who owes you.</h1><p>Keep invoices organised and update their status when you have confirmed payment.</p></div>
     <Pane title="Create an invoice"><form className="sd-form" onSubmit={e=>{e.preventDefault();try{patchBusiness(b=>addInvoice(b,invoice),'Invoice issued. It has not yet increased your income.');setInvoice({customer:'',description:'',amount:'',due_date:''});}catch(err){setError(err.message);}}}>
       <label>Customer<input required maxLength={100} value={invoice.customer} onChange={e=>setInvoice({...invoice,customer:e.target.value})} placeholder="Customer name"/></label><label>What did you sell?<input required maxLength={200} value={invoice.description} onChange={e=>setInvoice({...invoice,description:e.target.value})}/></label><label>Amount (ZAR)<input required min="0.01" step="0.01" type="number" value={invoice.amount} onChange={e=>setInvoice({...invoice,amount:e.target.value})}/></label><label>Due date (optional)<input type="date" value={invoice.due_date} onChange={e=>setInvoice({...invoice,due_date:e.target.value})}/></label><Btn type="submit">Create invoice</Btn>
     </form></Pane>
-    <Pane title="Your invoices">{current.invoices.map(i=><div className="sd-invoice" key={i.id}><div><b>{i.number} · {i.customer}</b><p>{i.description} {i.sample?'· SAMPLE':''}</p><small>{i.status==='paid'?'Paid (simulated)':'Unpaid'} · {currency(i.amount)}</small></div>{i.status!=='paid'&&<Btn light onClick={()=>pay(i.id)}>Simulate paid</Btn>}</div>)}{!current.invoices.length&&<Empty>No invoices yet.</Empty>}</Pane>
+    <Pane title="Your invoices">{current.invoices.map(i=><div className="sd-invoice" key={i.id}><div><b>{i.number} · {i.customer}</b><p>{i.description} {i.sample?'· SAMPLE':''}</p><small>{i.status==='paid'?'Marked paid':'Unpaid'} · {currency(i.amount)}</small></div>{i.status!=='paid'&&<Btn light onClick={()=>pay(i.id)}>Mark paid</Btn>}</div>)}{!current.invoices.length&&<Empty>No invoices yet.</Empty>}</Pane>
    </>}
    {!createBusiness&&page==='intelligence'&&<BusinessIntelligence business={current} workspace={workspace} accountEmail={cloudUser?.email} onNavigate={go} onSaveGoals={settings=>patchBusiness(b=>({...b,insightSettings:settings}),'Intelligence goals saved to this business.')} />}
    {!createBusiness&&page==='passport'&&<>
@@ -186,30 +181,38 @@ export default function StandaloneApp({onExit=noop}){
     <Pane title={current.name} subtitle={`${current.industry} · ${current.region}`}><p>{current.description||'Add a description to your profile.'}</p><div className="sd-actions"><Btn onClick={()=>setEditBusiness(!editBusiness)}>{editBusiness?'Close':'Edit profile'}</Btn><Btn light onClick={()=>setCreateBusiness(true)}>Add another business</Btn></div>{editBusiness&&<BusinessForm initial={current} onSave={edit} onCancel={()=>setEditBusiness(false)}/>}</Pane>
     <Pane title="Official registration guidance" subtitle="You can now track official registration steps in one place."><div className="sd-actions"><Btn onClick={()=>go('compliance')}>Open Business Compliance Hub →</Btn></div>{OFFICIAL_SOURCES.slice(0,3).map(s=><div className="sd-source" key={s.id}><div><b>{s.name}</b><p>{s.detail}</p></div><InlineLink href={s.url}>Open official site</InlineLink></div>)}</Pane>
    </>}
-   {!createBusiness&&page==='shield'&&<><div className="sd-heading"><small>SMARTSHIELD</small><h1>Spot the warning signs.</h1><p>Text-only rules, not an authoritative fraud verdict.</p></div><Pane title="Check a suspicious message"><form className="sd-form" onSubmit={e=>{e.preventDefault();setScan(fraudCheck(scanText));setNotice('Text screening completed locally.');}}><label>Paste a message<textarea rows={5} required minLength={3} maxLength={10000} value={scanText} onChange={e=>setScanText(e.target.value)} placeholder="Paste a suspicious funding, invoice or payment message…"/></label><Btn type="submit">Check this message</Btn></form></Pane>{scan&&<Pane title={scan.level}><div className="sd-steps">{scan.signals.length?scan.signals.map(s=><div key={s} className="sd-flag">⚠ {s}</div>):<p>No obvious signs were detected. This does not prove the message is safe.</p>}</div><p>{scan.recommendation}</p></Pane>}</>}
-   {!createBusiness&&page==='advisor'&&<><div className="sd-heading"><small>GROWTH ADVISOR</small><h1>Your next best actions.</h1><p>Simple explainable recommendations based only on locally saved data.</p></div><Pane title={guidance.summary} subtitle={guidance.note}><div className="sd-steps">{guidance.items.length?guidance.items.map((x,i)=><div className="sd-step" key={i}><span>{i+1}</span><div><b>{x.title}</b><p>{x.why}</p></div><button onClick={()=>go(x.page)}>Open →</button></div>):<Empty>All current milestones have been covered. Continue tracking sales and costs.</Empty>}</div></Pane></>}
+   {!createBusiness&&page==='shield'&&<><div className="sd-heading"><small>SMARTSHIELD</small><h1>Spot the warning signs.</h1><p>Review warning signs, learn safer practices and track your protection progress.</p></div><Pane title="Check a suspicious message"><form className="sd-form" onSubmit={e=>{e.preventDefault();const result=fraudCheck(scanText);setScan(result);patchBusiness(b=>({...b,security:{...b.security,scans:(b.security?.scans||0)+1,highRiskScans:(b.security?.highRiskScans||0)+(result.signals.length>=2?1:0),lastLevel:result.level,lastScanAt:new Date().toISOString()}}),'Message reviewed. Protection journey updated.');}}><label>Paste a message<textarea rows={5} required minLength={3} maxLength={10000} value={scanText} onChange={e=>setScanText(e.target.value)} placeholder="Paste a suspicious funding, invoice or payment message…"/></label><Btn type="submit">Check this message</Btn></form></Pane>{scan&&<Pane title={scan.level}><div className="sd-steps">{scan.signals.length?scan.signals.map(s=><div key={s} className="sd-flag"><SmartIcon name="warning" size={16}/> {s}</div>):<p>No obvious signs were detected. This does not prove the message is safe.</p>}</div><p>{scan.recommendation}</p></Pane>}
+    <Pane title="Protection checklist" subtitle="These steps are tracked separately from business growth readiness.">
+      <label className="sd-checkrow"><input type="checkbox" checked={Boolean(current.security?.reviewedTips)} onChange={e=>patchBusiness(b=>({...b,security:{...b.security,reviewedTips:e.target.checked}}),'Protection guidance updated.')}/> I understand that OTPs, upfront fees and urgent payment requests may be warning signs.</label>
+      <label className="sd-checkrow"><input type="checkbox" checked={Boolean(current.security?.reviewedContacts)} onChange={e=>patchBusiness(b=>({...b,security:{...b.security,reviewedContacts:e.target.checked}}),'Official contact review updated.')}/> I know how to independently confirm a business or funder through official channels.</label>
+      <label className="sd-checkrow"><input type="checkbox" checked={Boolean(current.security?.reviewedScans)} onChange={e=>patchBusiness(b=>({...b,security:{...b.security,reviewedScans:e.target.checked}}),'Screening review updated.')}/> I have reviewed my last screening result and know what to do next.</label>
+      <p className="sd-muted">{current.security?.scans||0} message(s) screened for this business. Message text is not stored.</p>
+      <Btn light onClick={()=>{setGoal('protect');go('journey');}}>View protection journey</Btn>
+    </Pane></>}
+
    {!createBusiness&&page==='insights'&&<LiveInsights region={current.region} industry={current.industry}/>}
-   {!createBusiness&&page==='opportunities'&&<><div className="sd-heading"><small>MARKET & PROCUREMENT ACCESS</small><h1>Find your next opportunity.</h1><p>Example briefs are fictional; official external portals may contain live opportunities.</p></div>
+   {!createBusiness&&page==='opportunities'&&<><div className="sd-heading"><small>MARKET & PROCUREMENT ACCESS</small><h1>Find your next opportunity.</h1><p>Discover procurement notices, explore relevant briefs and check eligibility.</p></div>
     <TreasuryOpportunities business={current}/>
     <Pane title="Live opportunity source" subtitle="Official source portal for checking full notices and submission requirements."><div className="sd-source"><div><b>National Treasury eTender Portal</b><p>Search published tenders by sector and region using the official website.</p></div><InlineLink href="https://www.etenders.gov.za/">Open live portal</InlineLink></div><Btn light onClick={()=>patchBusiness(b=>({...b,reviewedOpportunities:true}),'Opportunity source marked reviewed.')}>{current.reviewedOpportunities?'✓ Reviewed':'Mark opportunity search reviewed'}</Btn></Pane>
-    <Pane title="Fictional procurement practice briefs" subtitle={`Ranked by industry and province for ${current.name}. These are NOT real tenders.`}><div className="sd-catalog">{opportunities.slice(0,8).map(o=><div className="sd-catalogitem" key={o.id}><span className="sd-label">SAMPLE BRIEF · {o.score}/100 similarity</span><h3>{o.title}</h3><p>{o.description}</p><small>{o.industry} · {o.region} · Sample budget {currency(o.value)}</small></div>)}</div></Pane>
+    <Pane title="Procurement practice briefs" subtitle={`Planning exercises tailored to ${current.industry} and ${current.region}. These are not government tenders.`}><div className="sd-catalog">{opportunities.slice(0,8).map(o=><div className="sd-catalogitem" key={o.id}><span className="sd-label">Practice brief · {o.score}/100 relevance</span><h3>{o.title}</h3><p>{o.description}</p><small>{o.industry} · {o.region} · Indicative budget {currency(o.value)}</small></div>)}</div></Pane>
    </>}
    {!createBusiness&&page==='market'&&<SharedMarketplace business={current} accountId={cloudUid} workspace={workspace}
      onSaveListing={(offer,replace=false)=>patchBusiness(b=>({...b,listings:replace?(b.listings||[]).map(x=>x.id===offer.id?{...x,...offer}:x):[offer,...(b.listings||[])]}),replace?'Listing published.':'Listing saved as a draft.')}
      onRemoveListing={id=>patchBusiness(b=>({...b,listings:(b.listings||[]).filter(x=>x.id!==id)}),'Listing unpublished.')}/>}
    {!createBusiness&&page==='sources'&&<><div className="sd-heading"><small>OFFICIAL RESOURCES</small><h1>Trusted places to start.</h1><p>These are real official websites. Opening them requires connectivity, and their information can change.</p></div><Pane title="South African business resources">{OFFICIAL_SOURCES.map(x=><div className="sd-source" key={x.id}><div><span className="sd-label">{x.category}</span><b>{x.name}</b><p>{x.detail}</p></div><InlineLink href={x.url}>Visit</InlineLink></div>)}</Pane><p className="sd-footnote">Official links verified in October 2026. SmartGrowth supports self-reported portal reviews but does not independently verify registration or tax status; procurement records fetched from National Treasury must be checked against their original notices.</p></>}
-   {!createBusiness&&page==='more'&&<><div className="sd-heading"><small>WORKSPACE & SETTINGS</small><h1>Make SmartGrowth yours.</h1><p>Choose tools, switch businesses or back up your on-device data.</p></div>
-    <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','▣','My businesses'],['compliance','✓','Business compliance'],['invoices','▤','Invoices'],['intelligence','✦','My Intelligence'],['advisor','✧','Growth Advisor'],['shield','♢','SmartShield'],['market','▢','Market Links'],['insights','◉','Live Insights'],['opportunities','◇','Procurement'],['sources','↗','Official Sources']].map(([id,icon,label])=><button onClick={()=>go(id)} key={id}><span>{icon}</span>{label}<b>↗</b></button>)}</div></Pane>
+   {!createBusiness&&page==='more'&&<><div className="sd-heading"><small>WORKSPACE & SETTINGS</small><h1>Make SmartGrowth yours.</h1><p>Manage your business, account and preferences.</p></div>
+    <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','business','My businesses'],['compliance','compliance','Business compliance'],['invoices','invoices','Invoices'],['intelligence','intelligence','My Intelligence'],['shield','shield','SmartShield'],['market','market','Market Links'],['insights','insights','Live Insights'],['opportunities','opportunities','Procurement'],['sources','sources','Official Sources']].map(([id,icon,label])=><button onClick={()=>go(id)} key={id}><span><SmartIcon name={icon}/></span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Add or switch businesses" subtitle="Every business has its own finances, invoices, Passport and Journey."><div className="sd-businesslist">{state.businesses.map(b=><button key={b.id} className={b.id===current.id?'current':''} onClick={()=>{update(s=>({...s,activeId:b.id}));go('home')}}>{b.name} <small>{b.industry} · {b.region}</small></button>)}</div><Btn light onClick={()=>setCreateBusiness(true)}>+ Create another business</Btn></Pane>
-    <Pane title="App version" subtitle="Check this after updating your website or Android APK."><p className="sd-muted"><strong>SmartGrowth v1.3.0 · Tester Readiness</strong> — Floating assistant, shared market listings, fictional demo registry checks and clearer Treasury connection messages. No official CIPC verification.</p><p className="sd-muted">Website and Android must be updated separately. Your Firestore data remains in your existing Firebase project.</p></Pane>
-    <Pane title="Backup and device privacy" subtitle={workspace==='cloud'?'This account is cached locally and synchronises when online.':'Your offline records stay on this device until you explicitly import them into an account.'}><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div><div className="sd-actions"><Btn light onClick={()=>{setNotice('SmartGrowth is already running independently. You can close the app whenever you like.');}}>About offline use</Btn></div></Pane>
-    {workspace==='device'&&cloudUid&&<Pane title="Your cloud workspace"><p>You are signed into {cloudUser.email} but viewing device-only records.</p><Btn onClick={openCloud}>Open my account records →</Btn></Pane>}
-    <CloudSyncPanel user={cloudUser} status={cloudStatus} workspace={workspace} onImport={importLocalToAccount} onOpenDevice={openDevice} onOpenCloud={openCloud}/>
+    <Pane title="App version"><p className="sd-muted"><strong>SmartGrowth v1.4.0</strong></p><p className="sd-muted">Your companion for starting, managing and growing your business. Made by Four Horsemen Tech.</p></Pane>
+    <Pane title="About information in SmartGrowth"><p className="sd-muted">Company registry matches use fictional practice records and are not official CIPC confirmations. Procurement practice briefs are learning exercises. SmartGrowth does not process real payments. Official National Treasury records are labelled with their source and retrieval date.</p><p className="sd-muted">Personal insights are based on business records you enter. Cloud sign-in allows your account data to sync when you are connected; previously saved records remain available offline.</p></Pane>
+    <Pane title="Backup and device privacy" subtitle="Keep a personal backup of your business records."><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div></Pane>
+    
+    <CloudSyncPanel user={cloudUser} status={cloudStatus} workspace={workspace}/>
 
    </>}
-   <div className="sd-disclaimer">SMARTGROWTH · OFFLINE-FIRST BUSINESS WORKSPACE · No real payments or official registration verification. Cloud syncing requires a configured Firebase project and an initial online sign-in. Procurement records can be fetched from National Treasury when online, then saved for offline review. <InlineLink href={taxSource.url}>Tax guidance</InlineLink></div>
+
   </div>
   <FloatingAssistant business={current} userKey={workspace==='cloud'?cloudUid||'unknown':'device'} onNavigate={go}/>
-  <nav className="sd-bottom" aria-label="Standalone main navigation">{NAV.map(([id,icon,name])=><button key={id} aria-current={page===id?'page':undefined} className={page===id?'active':''} onClick={()=>go(id)}><span>{icon}</span><small>{name}</small></button>)}</nav>
+  <nav className="sd-bottom" aria-label="Standalone main navigation">{NAV.map(([id,icon,name])=><button key={id} aria-current={page===id?'page':undefined} className={page===id?'active':''} onClick={()=>go(id)}><span><SmartIcon name={icon} size={21}/></span><small>{name}</small></button>)}</nav>
  </div>;
 }
