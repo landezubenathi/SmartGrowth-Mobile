@@ -9,7 +9,7 @@ const example={releases:[
 ]};
 function memory(){let data={};return{getItem:k=>data[k]||null,setItem:(k,v)=>{data[k]=v}};}
 test('Treasury URL uses known government OCDS API and bounded UTC publication dates',()=>{
- assert.equal(treasuryURL(now,30), 'https://ocds-api.etenders.gov.za/api/OCDSReleases?dateFrom=2026-09-20&dateTo=2026-10-20&PageNumber=1');
+ assert.equal(treasuryURL(now,30), 'https://ocds-api.etenders.gov.za/api/OCDSReleases?dateFrom=2026-09-20&dateTo=2026-10-20&PageNumber=1&PageSize=50');
  assert.match(treasuryURL(now,999),/dateFrom=2026-07-22/);
 });
 test('OCDS releases map to clear statuses and official release URLs',()=>{

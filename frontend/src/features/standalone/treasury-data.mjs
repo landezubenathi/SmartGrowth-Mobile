@@ -10,7 +10,7 @@ export function treasuryURL(now=new Date(),lookback=30,page=1){
  const days=Math.min(90,Math.max(1,Number(lookback)||30));
  const to=new Date(now),from=new Date(to.getTime()-days*86400000);
  const ymd=d=>d.toISOString().slice(0,10);
- return `${TREASURY_API}?dateFrom=${ymd(from)}&dateTo=${ymd(to)}&PageNumber=${Math.max(1,Math.floor(Number(page)||1))}`;
+ return `${TREASURY_API}?dateFrom=${ymd(from)}&dateTo=${ymd(to)}&PageNumber=${Math.max(1,Math.floor(Number(page)||1))}&PageSize=50`;
 }
 function releaseArray(payload){
  if(Array.isArray(payload)) return payload;

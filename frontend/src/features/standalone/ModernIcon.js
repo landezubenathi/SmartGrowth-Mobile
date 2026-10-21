@@ -1,0 +1,4 @@
+import React from 'react';
+import {House,Route,Wallet,MessageCircle,ShieldCheck,Menu,Building2,Receipt,TrendingUp,LockKeyhole,Store,Globe,FileCheck2,FileSearch,ChartNoAxesCombined,Settings,PlusCircle,ArrowUpRight,Bell,Landmark,ShieldAlert,FileText,Bot} from 'lucide-react';
+const icons={home:House,journey:Route,money:Wallet,assistant:MessageCircle,passport:ShieldCheck,more:Menu,business:Building2,invoices:Receipt,intelligence:Bot,advisor:TrendingUp,shield:ShieldAlert,market:Store,insights:ChartNoAxesCombined,opportunities:FileSearch,sources:Globe,compliance:FileCheck2,notifications:Bell,account:LockKeyhole,settings:Settings,add:PlusCircle,external:ArrowUpRight,treasury:Landmark,documents:FileText};
+export default function ModernIcon({name,size=20,...props}){const Icon=icons[name]||House;return <Icon size={size} strokeWidth={1.9} aria-hidden="true" {...props}/>;}

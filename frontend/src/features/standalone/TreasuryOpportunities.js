@@ -13,13 +13,17 @@ async function requestPublic({url}){
  try {
   const response=await fetch(endpoint,{headers:{Accept:'application/json'},signal:controller.signal});
   return {status:response.status,data:await response.json()};
+ }catch(error){
+  if(!proxy&&error instanceof TypeError)throw Error('Browser cannot reach the official API directly (network or CORS). Configure REACT_APP_TREASURY_PROXY_URL with the Cloudflare Worker URL for the hosted web app.');
+  if(error?.name==='AbortError')throw Error('National Treasury request timed out after 15 seconds.');
+  throw error;
  }finally{clearTimeout(timer);}
 }
 const SourceLink=({href,children})=><a href={href} target="_blank" rel="noopener noreferrer" className="sd-official-link">{children} ↗</a>;
 export default function TreasuryOpportunities({business}){
  const [feed,setFeed]=useState(()=>readTreasuryCache()||{status:'unavailable',records:[]});
  const [loading,setLoading]=useState(false);
- const [days,setDays]=useState(7);
+ const [days,setDays]=useState(30);
  const [query,setQuery]=useState('');
  const [onlyRelevant,setOnlyRelevant]=useState(false);
  const sorted=useMemo(()=>rankForBusiness(feed.records||[],business),[feed.records,business]);
@@ -27,10 +31,15 @@ export default function TreasuryOpportunities({business}){
  async function refresh(){setLoading(true);try{setFeed(await refreshTreasury({request:requestPublic,days}));}finally{setLoading(false);}}
  useEffect(()=>{
   // Cache is safe to display immediately; an explicit action refreshes external data.
-  setFeed(readTreasuryCache()||{status:'unavailable',records:[]});
+  const cached=readTreasuryCache();setFeed(cached||{status:'unavailable',records:[]});
+  // Try once on first online visit when no official cache exists; failures never invent data.
+  if(!cached&&typeof navigator!=='undefined'&&navigator.onLine){let active=true;setLoading(true);
+   refreshTreasury({request:requestPublic,days:30}).then(x=>{if(active)setFeed(x);}).finally(()=>{if(active)setLoading(false);});
+   return ()=>{active=false;};
+  }
  },[]);
  return <section className="sd-panel sd-treasury" aria-label="Official National Treasury procurement data">
-  <div className="sd-panelhead"><h2>National Treasury procurement data</h2><p>Official OCDS records via National Treasury (or a restricted web proxy). Only date filters are sent. Your financial records stay private.</p></div>
+  <div className="sd-panelhead"><h2>National Treasury procurement data</h2><p>Official OCDS records via National Treasury (or a restricted web proxy). Only publication date/page filters are sent. Your private business records stay on your device.</p></div>
   <div className="sd-treasury-state" role="status"><strong>{feed.status==='live'?'● Retrieved from official API':feed.status==='cached'?'◷ Saved official records':'○ No downloaded records yet'}</strong><small>{feed.fetchedAt?`Last successful retrieval: ${new Date(feed.fetchedAt).toLocaleString('en-ZA')}`:'Connect to the internet to retrieve records.'}</small></div>
   <div className="sd-treasury-actions"><label>Publication window <select value={days} onChange={e=>setDays(Number(e.target.value))}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={60}>Last 60 days</option><option value={90}>Last 90 days</option></select></label><button className="sd-btn" onClick={refresh} disabled={loading}>{loading?'Contacting Treasury…':'↻ Fetch official data'}</button></div>
   {feed.warning&&<p className="sd-treasury-note" role="status">{feed.status==='cached'?feed.warning:`Live refresh unavailable: ${feed.warning}. Please check your connection or try the official portal.`}</p>}
@@ -46,6 +55,6 @@ export default function TreasuryOpportunities({business}){
     <div className="sd-treasury-links"><SourceLink href={x.source}>Original OCDS release</SourceLink><SourceLink href={TREASURY_PORTAL}>Verify tender on eTenders</SourceLink></div>
    </article>):<p className="sd-empty">No results match your filters in this downloaded page. Try different keywords, another date window or the official portal.</p>}</div>
   </>:<p className="sd-empty">No official records are available on this device yet. Your sample briefs below remain available offline.</p>}
-  <p className="sd-treasury-disclaimer">Treasury's transparency data is a subset of published procurement information and may be incomplete or delayed. These records are not automatically verified as open tenders. Always check the original documents, requirements and deadline before applying. <SourceLink href={TREASURY_DOCS}>Source policy</SourceLink></p>
+  <p className="sd-treasury-disclaimer">Web deployments may require the supplied HTTPS relay because the official API can reject browser cross-origin requests. The Android APK requests through Capacitor native HTTP. Treasury's transparency data is a subset of published procurement information and may be incomplete or delayed. These records are not automatically verified as open tenders. Always check the original documents, requirements and deadline before applying. <SourceLink href={TREASURY_DOCS}>Source policy</SourceLink></p>
  </section>;
 }

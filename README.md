@@ -1,3 +1,13 @@
+> **SmartGrowth v1.2:** Business Compliance Hub added. See [Compliance guide](docs/SMARTGROWTH_V1_2_COMPLIANCE.md). This release offers offline readiness checks and official portal links; it does not yet conduct automatic government registration verification.
+
+# SmartGrowth — Personalised Business Intelligence Upgrade
+
+**New:** `✦ Insights` presents business-specific income/expense trends, overdue invoice reminders, spending categories, monthly goals and explainable actions while keeping the app offline-first. See [upgrade and deployment instructions](docs/INTELLIGENCE_UPGRADE_AND_RELEASE.md).
+
+**Web release:** double-click `PUBLISH_WEB_WINDOWS.bat` after backing up data. **Android release:** push to GitHub → Actions → download the new APK. These are independent updates.
+
+---
+
 > **SmartGrowthMobile Firebase setup:** The attached ZIP now includes your actual Web App settings in Git-ignored `frontend/.env.local`. See [`docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md`](docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md). Firebase Authentication and Firestore still must be enabled and rules published in your own Firebase Console. For GitHub cloud APK builds, copy the four required Web App values into Actions Variables.
 
 # SmartGrowth — Offline-First Mobile + Cloud Accounts + Real Procurement Data
@@ -35,3 +45,13 @@ Run the `.github/workflows/smartgrowth-android.yml` workflow on GitHub to produc
 - `backend/`: **legacy optional** FastAPI workflows kept for reference; not needed by the current app
 
 **Not implemented:** real money transfers, independent CIPC/SARS verification, fraud-model AI, authorised procurement applications. Readiness scoring and advice are explainable rules-based estimates. No cloud project or API key has been created on your behalf.
+
+---
+
+## SmartGrowth v1.2.1 — team refinement
+
+The updated source implements the team's requested login-home redirect, private-to-shared opt-in market listings, more diagnostic National Treasury fetching, fictional CIPC-like demo matching, a consolidated local FAQ/business-data assistant, modern primary icons, and in-app notifications.
+
+**Start here:** [`docs/SMARTGROWTH_V1_2_1_TEAM_REFINEMENT.md`](docs/SMARTGROWTH_V1_2_1_TEAM_REFINEMENT.md).
+
+Do not mistake the local registry demo for official verification, the offline help bot for a live ChatGPT API, or in-app notifications for OS push notifications. Real cross-account publication requires deploying the included updated Firebase Firestore security rules. Browser live procurement data may need a deployed HTTPS Worker. The existing Firebase project and saved data should not be reset.
