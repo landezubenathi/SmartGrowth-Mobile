@@ -49,3 +49,16 @@ export async function uploadBusiness(uid,b){
  if(JSON.stringify(payload).length>700000)throw Error('Business record exceeds the 700 KB sync limit. Export a backup.');
  return setDoc(doc(svc.db,'users',uid,'businesses',b.id),{payload,ownerUid:uid,modifiedAt:b.modifiedAt||b.createdAt||''});
 }
+
+// Account-owned fictional registry. Never stores passwords or real CIPC credentials.
+export function watchPracticeRegistry(uid,callback,fail){
+ const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ return onSnapshot(collection(svc.db,'users',uid,'simulatedRegistry'),{includeMetadataChanges:true},snapshot=>{
+  callback(snapshot.docs.map(d=>d.data()).filter(d=>d.source==='smartgrowth-simulated-registry'),{fromCache:snapshot.metadata.fromCache,hasPendingWrites:snapshot.metadata.hasPendingWrites});
+ },fail);
+}
+export function createPracticeRegistryRecord(uid,record){
+ const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ if(record.ownerUid!==uid||record.businessId?.length>150||record.source!=='smartgrowth-simulated-registry'||record.status!=='practice')throw Error('Invalid simulated registry record');
+ return setDoc(doc(svc.db,'users',uid,'simulatedRegistry',record.businessId),record);
+}

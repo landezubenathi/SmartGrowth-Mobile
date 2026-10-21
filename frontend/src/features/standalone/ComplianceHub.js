@@ -2,6 +2,7 @@ import React from 'react';
 import {BUSINESS_STRUCTURES,COMPLIANCE_PORTALS,complianceDetails,registrationFormat,supplierFormat,markPortalReviewed,clearPortalReview,updateCompliance} from './compliance.mjs';
 import './compliance.css';
 import {demoRegistryMatch} from './demo-registry.mjs';
+import {PRACTICE_SOURCE} from './mock-registry.mjs';
 const activities=[
  {id:'cipc',title:'Company registration',summary:'BizPortal / BizProfile',description:'Company and close corporation information can be checked through the official CIPC service. CIPC APIVerse approval is required for automated verification.'},
  {id:'sars',title:'Tax and compliance',summary:'SARS eFiling / Online Query',description:'The taxpayer may authorise a third party using a TCS PIN. SmartGrowth does not accept, keep or validate tax PINs.'},
@@ -14,7 +15,7 @@ export default function ComplianceHub({business,onChange}){
  const review=key=>onChange(b=>markPortalReviewed(b,key),'Marked as reviewed by you. This is not government verification.');
  const clear=key=>onChange(b=>clearPortalReview(b,key),'Self-reported review cleared.');
  const cipcFormat=registrationFormat(c.cipcNumber),csdFormat=supplierFormat(c.csdNumber);
- const match=demoRegistryMatch(business);
+ const match=business.registrySource===PRACTICE_SOURCE?{status:'practice',message:'This business is recorded in your SmartGrowth simulated registry. It is not an official CIPC record.'}:demoRegistryMatch(business);
  return <div className="sg-compliance">
   <div className="sd-heading"><small>BUSINESS COMPLIANCE INTELLIGENCE</small><h1>Know what your business needs.</h1><p>Keep track of official steps for {business.name}. Checks on this page use your entries and are not proof of registration or tax compliance.</p></div>
   <section className="sd-panel"><div className="sd-panelhead"><h2>Readiness tracker</h2><p>{readiness.done} of {readiness.total} applicable steps reviewed. Completion is not official verification.</p></div>
@@ -24,9 +25,9 @@ export default function ComplianceHub({business,onChange}){
   </section>
   <section className="sd-panel"><div className="sd-panelhead"><h2>Business details</h2><p>Only enter information you are comfortable saving in this business workspace. Do not provide passwords, PINs or identity numbers.</p></div>
    <div className="sd-form">
-    <div className={'sg-registry-result '+match.status} role="status"><b>{match.status==='demo-match'?'✓ Demo registry match — simulated only':match.status==='no-match'?'Not found in demonstration records':'Registration details'}</b><p>{match.message}</p><small>Never use this as proof of CIPC registration. Official verification requires authorised CIPC API access.</small></div>
+    <div className={'sg-registry-result '+match.status} role="status"><b>{match.status==='practice'?'Practice registration recorded — simulated only':match.status==='demo-match'?'✓ Practice registry match — simulated only':match.status==='no-match'?'Not found in demonstration records':'Registration details'}</b><p>{match.message}</p><small>Never use this as proof of CIPC registration. Official verification requires authorised CIPC API access.</small></div>
     <label>Business structure<select aria-label="Business structure" value={c.structure||'unsure'} onChange={e=>change({structure:e.target.value})}>{BUSINESS_STRUCTURES.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
-    {c.structure==='registered_company'&&<label>Company registration number<input maxLength={15} placeholder="Enter your registration certificate number" autoComplete="off" value={c.cipcNumber||''} onChange={e=>change({cipcNumber:e.target.value})}/><small className={'sg-compliance-format '+cipcFormat.state}>{cipcFormat.message}</small></label>}
+    {c.structure==='registered_company'&&<label>Company registration number<input maxLength={15} readOnly={business.registrySource===PRACTICE_SOURCE} placeholder="Enter your registration certificate number" autoComplete="off" value={c.cipcNumber||''} onChange={e=>change({cipcNumber:e.target.value})}/><small className={'sg-compliance-format '+cipcFormat.state}>{business.registrySource===PRACTICE_SOURCE?'This is your simulated SmartGrowth registration reference. It is not a government certificate.':cipcFormat.message}</small></label>}
     <label className="sg-compliance-toggle"><input type="checkbox" checked={Boolean(c.governmentSupplier)} onChange={e=>change({governmentSupplier:e.target.checked})}/> I want to supply goods/services to government</label>
     {c.governmentSupplier&&<label>CSD supplier number (optional)<input maxLength={30} placeholder="MAAA..." autoComplete="off" value={c.csdNumber||''} onChange={e=>change({csdNumber:e.target.value.toUpperCase()})}/><small className={'sg-compliance-format '+csdFormat.state}>{csdFormat.message}</small></label>}
    </div>

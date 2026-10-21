@@ -11,9 +11,11 @@ import ComplianceHub from './ComplianceHub';
 import FloatingAssistant from './FloatingAssistant';
 import SharedMarketplace from './SharedMarketplace';
 import {demoRegistryMatch} from './demo-registry.mjs';
+import {PRACTICE_SOURCE,practiceRegistrationNumber,validateRegistrationInput,registrationFromBusiness,attachRegisteredBusinesses,REGISTRY_NOTICE} from './mock-registry.mjs';
+import AccountGateway from './AccountGateway';
 import {complianceDetails} from './compliance.mjs';
 import {analyzeBusiness} from './intelligence.mjs';
-import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness} from './cloud-firebase';
+import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness,watchPracticeRegistry,createPracticeRegistryRecord} from './cloud-firebase';
 import {loadCloudState,saveCloudState,mergeState} from './cloud-store.mjs';
 import SmartIcon from './SmartIcon';
 import './standalone.css';
@@ -25,7 +27,7 @@ function Empty({children}){return <p className="sd-empty">{children}</p>}
 function InlineLink({href,children}){return <a href={href} target="_blank" rel="noreferrer noopener" className="sd-official-link">{children} ↗</a>}
 function Kpi({label,value,note}){return <div className="sd-kpi"><span>{label}</span><strong>{value}</strong>{note&&<small>{note}</small>}</div>}
 function Btn({children,onClick,light=false,type='button',disabled=false}){return <button type={type} className={light?'sd-btn secondary':'sd-btn'} onClick={onClick} disabled={disabled}>{children}</button>}
-const BusinessForm=({onSave,onCancel,initial=null})=>{
+const BusinessForm=({onSave,onCancel,initial=null,practice=false})=>{
  const [draft,setDraft]=useState(initial?{...initial,cipcNumber:initial?.compliance?.cipcNumber||''}:{name:'',industry:'Catering',region:'Eastern Cape',description:'',cipcNumber:''});
  const [custom,setCustom]=useState(initial?.industry&&!INDUSTRIES.some(i=>i.id===initial.industry)?initial.industry:'');
  const [error,setError]=useState('');
@@ -35,16 +37,20 @@ const BusinessForm=({onSave,onCancel,initial=null})=>{
   <label>Business type / industry<select value={industryChoice} onChange={e=>setDraft({...draft,industry:e.target.value})}>{INDUSTRIES.map(i=><option key={i.id} value={i.id}>{i.id}</option>)}<option value="Custom">My own industry…</option></select></label>
   {industryChoice==='Custom'&&<label>Describe your industry<input value={custom} required maxLength={60} onChange={e=>setCustom(e.target.value)} placeholder="e.g. Automotive repairs"/></label>}
   <label>Province<select value={draft.region} onChange={e=>setDraft({...draft,region:e.target.value})}>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></label>
-  <label>Company registration number (only if applicable)<input value={draft.cipcNumber||''} maxLength={15} onChange={e=>setDraft({...draft,cipcNumber:e.target.value})} placeholder="Enter the number on your registration certificate"/><small>Enter the exact number. Demo checks are fictional; use CIPC for official confirmation.</small></label>
+  {!practice&&<label>Company registration number (only if applicable)<input value={draft.cipcNumber||''} readOnly={initial?.registrySource===PRACTICE_SOURCE} maxLength={15} onChange={e=>setDraft({...draft,cipcNumber:e.target.value})} placeholder="Enter the number on your registration certificate"/><small>{initial?.registrySource===PRACTICE_SOURCE?'This reference belongs to your SmartGrowth practice registry business.':'Enter the exact number. Practice checks are fictional; use CIPC for official confirmation.'}</small></label>}
+  {practice&&<div className="sd-registry-caution" role="note">A practice registration reference will be generated automatically. This does not register a company with CIPC.</div>}
   <label>What does the business offer?<textarea rows={3} maxLength={400} value={draft.description||''} onChange={e=>setDraft({...draft,description:e.target.value})} placeholder="Describe your products, customers and services."/></label>
   {error&&<div role="alert" className="sd-error">{error}</div>}
-  <div className="sd-actions"><Btn type="submit">Save business</Btn><Btn light onClick={onCancel}>Cancel</Btn></div>
+  <div className="sd-actions"><Btn type="submit">{practice?'Create practice business record':'Save business'}</Btn>{onCancel&&<Btn light onClick={onCancel}>Cancel</Btn>}</div>
  </form>;
 };
 export default function StandaloneApp(){
  const [state,setState]=useState(loadState);
  const [page,setPage]=useState('home');
  const [cloudUser,setCloudUser]=useState(null);
+ const [authReady,setAuthReady]=useState(false);
+ const [registryLoading,setRegistryLoading]=useState(true);
+ const [businessLoading,setBusinessLoading]=useState(true);
  const [workspace,setWorkspace]=useState('device');
  const [cloudStatus,setCloudStatus]=useState('Saved locally · sign in once for automatic cloud sync');
  const cloudUid=cloudUser?.uid||null;
@@ -76,8 +82,9 @@ export default function StandaloneApp(){
  useEffect(()=>{
   if(!firebaseConfigured)return;
   return observeLogin(user=>{
-   if(user){setCloudUser(user);setWorkspace('cloud');setState(loadCloudState(user.uid));setCloudStatus(navigator.onLine?'Connecting to your cloud records…':'Offline — your account workspace is available on this device');}
-   else {setCloudUser(null);setWorkspace('device');setState(loadState());setCloudStatus('Saved locally · sign in to sync');}
+   setAuthReady(true);
+   if(user){setRegistryLoading(true);setBusinessLoading(true);setCloudUser(user);setWorkspace('cloud');setState(loadCloudState(user.uid));setCloudStatus(navigator.onLine?'Connecting to your cloud records…':'Offline — your account workspace is available on this device');}
+   else {setRegistryLoading(false);setBusinessLoading(false);setCloudUser(null);setWorkspace('device');setState(loadState());setCloudStatus('Saved locally · sign in to sync');}
   });
  },[]);
  useEffect(()=>{
@@ -87,6 +94,7 @@ export default function StandaloneApp(){
   let stop;
   try {stop=watchBusinesses(uid,(remote,meta)=>{
    if(!alive)return;
+   if(!meta.fromCache||remote.length||!navigator.onLine)setBusinessLoading(false);
    const local=loadCloudState(uid);
    const result=mergeState(local,remote);
    try {saveCloudState(uid,result.state);setState(result.state);} catch(e){setError(e.message);}
@@ -95,6 +103,27 @@ export default function StandaloneApp(){
    if(!meta.fromCache)result.needUpload.forEach(b=>uploadBusiness(uid,b).catch(e=>setCloudStatus('Sync needs attention: '+e.message)));
   },e=>setCloudStatus('Cloud connection error: '+e.message));}catch(e){setCloudStatus('Cloud configuration error: '+e.message);}
   return ()=>{alive=false;stop?.();};
+ },[cloudUid,workspace]);
+ // Registry records belong to this Firebase account and contain NO password.
+ // Existing seeded businesses appear automatically, without importing device examples.
+ useEffect(()=>{
+  if(!cloudUid||workspace!=='cloud')return;
+  let active=true;
+  let unwatch;
+  try{unwatch=watchPracticeRegistry(cloudUid,(records,meta)=>{
+   if(!active)return;
+   setRegistryLoading(Boolean(!records.length && meta.fromCache && navigator.onLine));
+   const local=loadCloudState(cloudUid);
+   const result=attachRegisteredBusinesses(local,records);
+   if(result.added.length){
+    try{const stored=saveCloudState(cloudUid,result.state);setState(stored);
+     result.added.forEach(b=>uploadBusiness(cloudUid,b).catch(e=>setCloudStatus('Business sync needs attention: '+e.message)));
+    }catch(e){setError(e.message);}
+   }else if(result.state.businesses.some(b=>b.registryId&&!local.businesses.find(x=>x.id===b.id&&x.registryId))){
+    try{saveCloudState(cloudUid,result.state);setState(result.state);}catch(e){setError(e.message);}
+   }
+  },e=>{if(active){setRegistryLoading(false);setCloudStatus('Practice registry could not be loaded: '+e.message);}});}catch(e){setRegistryLoading(false);setCloudStatus(e.message);}
+  return ()=>{active=false;unwatch?.();};
  },[cloudUid,workspace]);
  function update(fn,message){try{
   setError('');const next=fn(state);
@@ -110,24 +139,44 @@ export default function StandaloneApp(){
  }catch(e){setError(e.message);}}
  function patchBusiness(fn,message){update(old=>({...old,businesses:old.businesses.map(b=>b.id===current.id?fn(b):b)}),message)}
  function go(p){setPage(p==='advisor'?'intelligence':p);setError('');setNotice('');window.scrollTo?.(0,0)}
- function create(d,withSamples=false){const b=withSamples?sampleBusiness(d.industry,d.region,d.name):blankBusiness(d.name,d.industry,d.region,d.description);
-  if(d.description)b.description=d.description;
-  if(d.cipcNumber?.trim())b.compliance={...b.compliance,structure:'registered_company',cipcNumber:d.cipcNumber.trim(),checks:{}};
-  update(s=>({...s,activeId:b.id,businesses:[...s.businesses,b]}),withSamples?'Fictional example business created.':'Business created. Start recording real entries only if you wish.');setCreateBusiness(false);go('home');}
- function edit(d){patchBusiness(b=>({...b,name:d.name.trim(),industry:d.industry,region:d.region,description:d.description||'',compliance:{...b.compliance,cipcNumber:d.cipcNumber?.trim()||'',structure:d.cipcNumber?.trim()?'registered_company':b.compliance?.structure||'unsure',checks:d.cipcNumber?.trim()===b.compliance?.cipcNumber?b.compliance?.checks||{}:{}},isPlaceholder:false}),'Business profile updated.');setEditBusiness(false);}
+ function create(d,withSamples=false){
+  if(!cloudUid||workspace!=='cloud')throw Error('Sign in to register your business.');
+  const details=validateRegistrationInput(d);
+  const b=blankBusiness(details.name,details.industry,details.region,details.description);
+  b.compliance={...b.compliance,structure:'registered_company',cipcNumber:practiceRegistrationNumber(),checks:{}};
+  b.registrySource=PRACTICE_SOURCE;b.registryId=b.id;b.registryStatus='practice';
+  const record=registrationFromBusiness(b,cloudUid,cloudUser.email);
+  update(s=>({...s,activeId:b.id,businesses:[...s.businesses.filter(x=>!(x.isPlaceholder&&x.transactions.length===0&&x.invoices.length===0)),b]}),'Business created with a simulated registry reference.');
+  // Local business record is saved first. Firestore queues writes after reconnection.
+  createPracticeRegistryRecord(cloudUid,record).catch(err=>setCloudStatus('Practice registry sync pending: '+err.message));
+  setCreateBusiness(false);go('home');
+ }
+ function edit(d){
+  const isPractice=current.registrySource===PRACTICE_SOURCE;
+  const reg=isPractice?current.compliance?.cipcNumber:(d.cipcNumber?.trim()||'');
+  const changed={...current,name:d.name.trim(),industry:d.industry,region:d.region,description:d.description||'',modifiedAt:new Date().toISOString(),compliance:{...current.compliance,cipcNumber:reg,structure:reg?'registered_company':current.compliance?.structure||'unsure',checks:reg===current.compliance?.cipcNumber?current.compliance?.checks||{}:{}},isPlaceholder:false};
+  patchBusiness(()=>changed,'Business profile updated.');
+  if(isPractice&&cloudUid){createPracticeRegistryRecord(cloudUid,registrationFromBusiness(changed,cloudUid,cloudUser.email)).catch(e=>setCloudStatus('Practice registry sync needs attention: '+e.message));}
+  setEditBusiness(false);
+ }
  function pay(id){patchBusiness(b=>markInvoicePaid(b,id),'Payment status updated and recorded in bookkeeping.');}
  async function restoreFile(e){const file=e.target.files?.[0];if(!file)return;try{if(file.size>6*1024*1024)throw Error('Backup file exceeds 6 MB.');
   const restored=parseBackup(await file.text());if(!window.confirm('Replace ALL standalone data on this device with this backup? Your current local records will be overwritten.'))return;
   if(workspace==='cloud'&&cloudUid){update(()=>restored,'Backup restored to cloud workspace; preparing to sync.');}else{setState(saveState(restored));setNotice('Backup restored from your file.');}setError('');go('home');}catch(err){setError(err.message);}finally{e.target.value='';}}
  function downloadBackup(){const raw=exportState(state);const blob=new Blob([raw],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`smartgrowth-device-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);setNotice('Backup downloaded. Keep the file somewhere secure.');}
  const taxSource=OFFICIAL_SOURCES.find(x=>x.id==='sars');
+ if(!firebaseConfigured)return <AccountGateway configured={false}/>;
+ if(!authReady||!cloudUser)return <AccountGateway configured={true} loading={!authReady}/>;
+ const needsBusiness=state.businesses.length===1 && state.businesses[0].isPlaceholder && !state.businesses[0].transactions.length && !state.businesses[0].invoices.length && !state.businesses[0].listings.length;
+ if(needsBusiness && (registryLoading||businessLoading))return <AccountGateway configured={true} loading={true}/>;
+ if(needsBusiness && !registryLoading && !businessLoading && !createBusiness)return <div className="sd-shell"><header className="sd-topbar"><div className="sd-topinner"><div className="sd-brand"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></div><span className="sd-mode">ACCOUNT READY</span></div></header><main className="sd-content"><div className="sd-registry-welcome"><span className="sd-label">WELCOME, {cloudUser.email}</span><h1>Let's set up your business.</h1><p>No business records are linked to this account yet. If your test account was preloaded into the simulated registry, they will be retrieved automatically. Otherwise, complete your business information below.</p><div className="sd-registry-caution">{REGISTRY_NOTICE} Use your SmartGrowth credentials; never enter your actual BizPortal password.</div><BusinessForm practice onSave={d=>create(d)} onCancel={null}/></div></main></div>;
  return <div className="sd-shell">
   <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><span className="sd-mode"><SmartIcon name={workspace==='cloud'?'cloud':'check'} size={15}/> {workspace==='cloud'?'SYNC ENABLED':'OFFLINE READY'}</span></div></header>
   <div className="sd-content">
-   <div className="sd-businessbar"><div><small>{workspace==='cloud'?'MY BUSINESS':'MY WORKSPACE'}</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span><span className={demoRegistryMatch(current).status==='demo-match'?'sg-demo-status matched':'sg-demo-status'}>{demoRegistryMatch(current).status==='demo-match'?'Demo registry match · not CIPC verified':'CIPC status unverified'}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+   <div className="sd-businessbar"><div><small>{workspace==='cloud'?'MY BUSINESS':'MY WORKSPACE'}</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span>{current.compliance?.cipcNumber&&<span>Registration reference: {current.compliance.cipcNumber}</span>}<span className={demoRegistryMatch(current).status==='demo-match'?'sg-demo-status matched':'sg-demo-status'}>{current.registrySource===PRACTICE_SOURCE?'Practice registry record · not CIPC verified':demoRegistryMatch(current).status==='demo-match'?'Practice registry match · not CIPC verified':'CIPC status unverified'}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
    {notice&&<Notice>{notice} <button aria-label="Dismiss notice" onClick={()=>setNotice('')}>×</button></Notice>}
    {error&&<div className="sd-error" role="alert">{error}</div>}
-   {createBusiness?<Pane title="Add another business" subtitle="Create a private business workspace using your own information."><BusinessForm onSave={d=>create(d,false)} onCancel={()=>setCreateBusiness(false)}/></Pane>:null}
+   {createBusiness?<Pane title="Add another business" subtitle="Create a private business workspace using your own information."><BusinessForm practice onSave={d=>create(d,false)} onCancel={()=>setCreateBusiness(false)}/></Pane>:null}
    {!createBusiness&&page==='home'&&<>
     <section className="sd-hero"><div className="sd-eyebrow">SMARTGROWTH · FOUR HORSEMEN TECH</div><h1>Build your business.<br/><em>One step at a time.</em></h1><p>Manage your records, track readiness and discover your next action—even without an internet connection.</p><Btn onClick={()=>go('journey')}>Continue my journey →</Btn></section>
     <div className="sd-kpis"><Kpi label="Recorded income" value={currency(f.income)}/><Kpi label="Recorded expenses" value={currency(f.expenses)}/><Kpi label="Operating surplus" value={currency(f.surplus)} note="From saved records"/><Kpi label="Growth Passport" value={`${p.score}/100`} note="Business readiness"/></div>
@@ -203,7 +252,7 @@ export default function StandaloneApp(){
    {!createBusiness&&page==='more'&&<><div className="sd-heading"><small>WORKSPACE & SETTINGS</small><h1>Make SmartGrowth yours.</h1><p>Manage your business, account and preferences.</p></div>
     <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','business','My businesses'],['compliance','compliance','Business compliance'],['invoices','invoices','Invoices'],['intelligence','intelligence','My Intelligence'],['shield','shield','SmartShield'],['market','market','Market Links'],['insights','insights','Live Insights'],['opportunities','opportunities','Procurement'],['sources','sources','Official Sources']].map(([id,icon,label])=><button onClick={()=>go(id)} key={id}><span><SmartIcon name={icon}/></span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Add or switch businesses" subtitle="Every business has its own finances, invoices, Passport and Journey."><div className="sd-businesslist">{state.businesses.map(b=><button key={b.id} className={b.id===current.id?'current':''} onClick={()=>{update(s=>({...s,activeId:b.id}));go('home')}}>{b.name} <small>{b.industry} · {b.region}</small></button>)}</div><Btn light onClick={()=>setCreateBusiness(true)}>+ Create another business</Btn></Pane>
-    <Pane title="App version"><p className="sd-muted"><strong>SmartGrowth v1.4.0</strong></p><p className="sd-muted">Your companion for starting, managing and growing your business. Made by Four Horsemen Tech.</p></Pane>
+    <Pane title="App version"><p className="sd-muted"><strong>SmartGrowth v1.5.0</strong></p><p className="sd-muted">Your companion for starting, managing and growing your business. Made by Four Horsemen Tech.</p></Pane>
     <Pane title="About information in SmartGrowth"><p className="sd-muted">Company registry matches use fictional practice records and are not official CIPC confirmations. Procurement practice briefs are learning exercises. SmartGrowth does not process real payments. Official National Treasury records are labelled with their source and retrieval date.</p><p className="sd-muted">Personal insights are based on business records you enter. Cloud sign-in allows your account data to sync when you are connected; previously saved records remain available offline.</p></Pane>
     <Pane title="Backup and device privacy" subtitle="Keep a personal backup of your business records."><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div></Pane>
     

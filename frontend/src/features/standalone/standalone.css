@@ -38,3 +38,6 @@
 .sd-mode{display:flex;align-items:center;gap:5px}
 .sd-goals button span,.sd-shortcuts button span,.sd-bottom button span{display:inline-flex;align-items:center;justify-content:center}
 .sd-goals button span{color:inherit}
+
+/* Account-linked onboarding: intentionally separate from a real CIPC submission. */
+.sd-registry-welcome{max-width:730px;margin:16px auto;background:#fff;border:1px solid #dfeae2;border-radius:20px;padding:clamp(20px,4vw,38px);box-shadow:0 8px 30px #173e3209}.sd-registry-welcome h1{font-size:clamp(25px,5vw,39px);margin:10px 0}.sd-registry-welcome>p{color:#5e796c;line-height:1.6;font-size:14px}.sd-registry-caution{border:1px solid #e7d6b4;border-radius:12px;background:#fff8e9;color:#865a1c;font-size:12px;line-height:1.6;padding:13px;margin:15px 0}.sd-registry-welcome .sd-form{max-width:none}.sd-registry-welcome .sd-btn{width:fit-content}

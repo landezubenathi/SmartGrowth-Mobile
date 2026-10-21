@@ -1,3 +1,9 @@
+# SmartGrowth v1.5 — One-stop Business Journey
+
+SmartGrowth is a mobile-first React + Capacitor app with Firebase sign-in, offline business records, and Firestore sync. Version 1.5 includes a **fictional, account-owned practice business registry**, NOT a live CIPC integration.
+
+**Start here:** `docs/SMARTGROWTH_V1_5_ONE_STOP.md` for setup, Firestore rules, five test-account seeding instructions, web deployment, and Android APK build.
+
 > **SmartGrowth v1.2:** Business Compliance Hub added. See [Compliance guide](docs/SMARTGROWTH_V1_2_COMPLIANCE.md). This release offers offline readiness checks and official portal links; it does not yet conduct automatic government registration verification.
 
 # SmartGrowth — Personalised Business Intelligence Upgrade
