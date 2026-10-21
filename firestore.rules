@@ -27,34 +27,56 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Marketplace is opt-in. Public records contain only allowed presentation fields.
-    // Do not ever publish /users/{uid}/businesses private payloads.
-    match /marketListings/{listingId} {
-      allow read: if request.auth != null;
-      function validListing() {
-        let d = request.resource.data;
-        return request.auth != null
-          && d.keys().hasAll(['ownerUid','businessId','businessName','industry','region','name','description','price','published','createdAt'])
-          && d.keys().hasOnly(['ownerUid','businessId','businessName','industry','region','name','description','price','published','createdAt'])
-          && d.ownerUid == request.auth.uid
-          && listingId.matches('^' + request.auth.uid + '_[A-Za-z0-9_-]{3,150}$')
-          && d.businessId is string && d.businessId.size() <= 150
-          && exists(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId))
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId)).data.payload.name == d.businessName
-          && d.businessName is string && d.businessName.size() > 0 && d.businessName.size() <= 90
-          && d.industry is string && d.industry.size() <= 60
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId)).data.payload.industry == d.industry
-          && d.region is string && d.region.size() <= 60
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.businessId)).data.payload.region == d.region
-          && d.name is string && d.name.size() > 0 && d.name.size() <= 90
-          && d.description is string && d.description.size() > 0 && d.description.size() <= 500
-          && d.price is number && d.price > 0 && d.price <= 100000000
-          && d.published == true && d.createdAt is string && d.createdAt.size() <= 32;
-      }
-      allow create: if validListing();
-      allow update: if validListing() && resource.data.ownerUid == request.auth.uid
-        && resource.data.businessId == request.resource.data.businessId;
-      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    // Simulated registry records are PRIVATE to the authenticated account.
+    // These are not official CIPC data or government validation.
+    function validPracticeRegistry(uid, businessId) {
+      let d = request.resource.data;
+      return request.auth != null && request.auth.uid == uid
+        && d.keys().hasAll(['ownerUid','businessId','email','businessName','industry','province','registrationNumber','source','status','createdAt','modifiedAt'])
+        && d.keys().hasOnly(['ownerUid','businessId','email','businessName','industry','province','registrationNumber','source','status','createdAt','modifiedAt'])
+        && d.ownerUid == uid && d.businessId == businessId
+        && d.email == request.auth.token.email
+        && d.source == 'smartgrowth-simulated-registry'
+        && d.status == 'practice'
+        && d.businessName is string && d.businessName.size() >= 3 && d.businessName.size() <= 90
+        && d.industry is string && d.industry.size() > 0 && d.industry.size() <= 80
+        && d.province is string && d.province.size() > 0 && d.province.size() <= 80
+        && d.registrationNumber is string
+        && d.registrationNumber.matches('^[0-9]{4}/[0-9]{6}/07$')
+        && d.createdAt is string && d.modifiedAt is string;
+    }
+    match /users/{uid}/simulatedRegistry/{businessId} {
+      allow get, list: if ownsWorkspace(uid);
+      allow create: if ownsWorkspace(uid) && validPracticeRegistry(uid, businessId);
+      allow update: if ownsWorkspace(uid)
+        && resource.data.ownerUid == uid && resource.data.businessId == businessId
+        && validPracticeRegistry(uid, businessId);
+      allow delete: if ownsWorkspace(uid);
+    }
+
+    // Public marketplace: anyone may read published offers, but only an
+    // authenticated owner may create/update/remove their own limited public listing.
+    function validOffer() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['ownerUid','businessId','businessName','industry','province','name','description','price','status','createdAt'])
+        && d.keys().hasOnly(['ownerUid','businessId','businessName','industry','province','name','description','price','status','createdAt'])
+        && request.auth != null && d.ownerUid == request.auth.uid
+        && d.businessId is string && d.businessId.size() <= 150
+        && d.businessName is string && d.businessName.size() <= 90
+        && d.industry is string && d.industry.size() <= 80
+        && d.province is string && d.province.size() <= 80
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 90
+        && d.description is string && d.description.size() > 0 && d.description.size() <= 500
+        && d.price is number && d.price > 0 && d.price <= 100000000
+        && d.status == 'published' && d.createdAt is string;
+    }
+    match /marketplace/{offerId} {
+      allow get, list: if resource.data.status == 'published';
+      allow create: if validOffer() && offerId.matches('offer_[A-Za-z0-9_]+');
+      allow update: if validOffer() && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.businessId == resource.data.businessId;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
     }
 
     // All other paths remain denied.

@@ -2,9 +2,8 @@
  * The Firebase Web config contains public project identifiers, never service-account keys.
  */
 import {initializeApp,getApps,getApp} from 'firebase/app';
-import {publicListingPayload,marketDocumentId} from './marketplace.mjs';
 import {getAuth,setPersistence,browserLocalPersistence,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail} from 'firebase/auth';
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,onSnapshot,setDoc,deleteDoc,query,orderBy,limit} from 'firebase/firestore';
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,onSnapshot,setDoc} from 'firebase/firestore';
 const config={
  apiKey:process.env.REACT_APP_FIREBASE_API_KEY,
  authDomain:process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -51,24 +50,15 @@ export async function uploadBusiness(uid,b){
  return setDoc(doc(svc.db,'users',uid,'businesses',b.id),{payload,ownerUid:uid,modifiedAt:b.modifiedAt||b.createdAt||''});
 }
 
-/** Public market collection holds only explicitly published product/service details.
- * Never copy private business payloads or customer/financial records here.
- */
-export function observePublicListings(onItems,onError){
- const svc=getCloud();if(!svc)return ()=>{};
- return onSnapshot(query(collection(svc.db,'marketListings'),orderBy('createdAt','desc'),limit(100)),snapshot=>{
-  const data=snapshot.docs.map(doc=>({id:doc.id,...doc.data()}));
-  onItems(data.filter(x=>x.published===true));
- },onError);
+// Account-owned fictional registry. Never stores passwords or real CIPC credentials.
+export function watchPracticeRegistry(uid,callback,fail){
+ const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ return onSnapshot(collection(svc.db,'users',uid,'simulatedRegistry'),{includeMetadataChanges:true},snapshot=>{
+  callback(snapshot.docs.map(d=>d.data()).filter(d=>d.source==='smartgrowth-simulated-registry'),{fromCache:snapshot.metadata.fromCache,hasPendingWrites:snapshot.metadata.hasPendingWrites});
+ },fail);
 }
-export async function publishMarketListing(uid,business,listing){
- const svc=getCloud();if(!svc||svc.auth.currentUser?.uid!==uid)throw Error('Sign in to publish a listing.');
- const id=marketDocumentId(uid,listing.id);
- const publicData=publicListingPayload(uid,business,listing);
- await setDoc(doc(svc.db,'marketListings',id),publicData);
- return id;
-}
-export async function unpublishMarketListing(uid,listing){
- const svc=getCloud();if(!svc||svc.auth.currentUser?.uid!==uid)throw Error('Sign in to manage published listings.');
- return deleteDoc(doc(svc.db,'marketListings',marketDocumentId(uid,listing.id)));
+export function createPracticeRegistryRecord(uid,record){
+ const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ if(record.ownerUid!==uid||record.businessId?.length>150||record.source!=='smartgrowth-simulated-registry'||record.status!=='practice')throw Error('Invalid simulated registry record');
+ return setDoc(doc(svc.db,'users',uid,'simulatedRegistry',record.businessId),record);
 }

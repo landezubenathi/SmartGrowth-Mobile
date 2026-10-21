@@ -1,3 +1,9 @@
+# SmartGrowth v1.5 — One-stop Business Journey
+
+SmartGrowth is a mobile-first React + Capacitor app with Firebase sign-in, offline business records, and Firestore sync. Version 1.5 includes a **fictional, account-owned practice business registry**, NOT a live CIPC integration.
+
+**Start here:** `docs/SMARTGROWTH_V1_5_ONE_STOP.md` for setup, Firestore rules, five test-account seeding instructions, web deployment, and Android APK build.
+
 > **SmartGrowth v1.2:** Business Compliance Hub added. See [Compliance guide](docs/SMARTGROWTH_V1_2_COMPLIANCE.md). This release offers offline readiness checks and official portal links; it does not yet conduct automatic government registration verification.
 
 # SmartGrowth — Personalised Business Intelligence Upgrade
@@ -45,13 +51,3 @@ Run the `.github/workflows/smartgrowth-android.yml` workflow on GitHub to produc
 - `backend/`: **legacy optional** FastAPI workflows kept for reference; not needed by the current app
 
 **Not implemented:** real money transfers, independent CIPC/SARS verification, fraud-model AI, authorised procurement applications. Readiness scoring and advice are explainable rules-based estimates. No cloud project or API key has been created on your behalf.
-
----
-
-## SmartGrowth v1.2.1 — team refinement
-
-The updated source implements the team's requested login-home redirect, private-to-shared opt-in market listings, more diagnostic National Treasury fetching, fictional CIPC-like demo matching, a consolidated local FAQ/business-data assistant, modern primary icons, and in-app notifications.
-
-**Start here:** [`docs/SMARTGROWTH_V1_2_1_TEAM_REFINEMENT.md`](docs/SMARTGROWTH_V1_2_1_TEAM_REFINEMENT.md).
-
-Do not mistake the local registry demo for official verification, the offline help bot for a live ChatGPT API, or in-app notifications for OS push notifications. Real cross-account publication requires deploying the included updated Firebase Firestore security rules. Browser live procurement data may need a deployed HTTPS Worker. The existing Firebase project and saved data should not be reset.
