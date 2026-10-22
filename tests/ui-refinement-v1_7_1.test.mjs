@@ -26,7 +26,9 @@ test('Duplicate compliance sections are gone; official steps remain',()=>{
  const s=read('ComplianceHub.js');
  assert.doesNotMatch(s,/<h2>Business details<\/h2>/);
  assert.doesNotMatch(s,/Official CIPC verification — future integration/);
- assert.match(s,/Official registration and compliance services/);
+ assert.match(s,/Tax and supplier compliance services/);
+ assert.doesNotMatch(s,/title:'Company registration'/);
+ assert.doesNotMatch(s,/BizPortal \/ BizProfile/);
  assert.match(s,/Readiness tracker/);
 });
 test('Treasury source links are explicitly allowed to wrap',()=>{

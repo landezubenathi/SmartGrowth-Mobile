@@ -2,7 +2,6 @@ import React from 'react';
 import {COMPLIANCE_PORTALS,complianceDetails,markPortalReviewed,clearPortalReview} from './compliance.mjs';
 import './compliance.css';
 const activities=[
- {id:'cipc',title:'Company registration',summary:'BizPortal / BizProfile',description:'Company and close corporation information can be checked through the official CIPC service. CIPC APIVerse approval is required for automated verification.'},
  {id:'sars',title:'Tax and compliance',summary:'SARS eFiling / Online Query',description:'The taxpayer may authorise a third party using a TCS PIN. SmartGrowth does not accept, keep or validate tax PINs.'},
  {id:'csd',title:'Government supplier readiness',summary:'Central Supplier Database',description:'Register or inspect your official supplier report; do not confuse a supplier number with a verified supplier record.'}
 ];
@@ -18,8 +17,8 @@ export default function ComplianceHub({business,onChange}){
    <div className="sg-compliance-tasks">{readiness.items.map(item=><div key={item.id}><b><span aria-hidden="true">{item.done?'✓':'○'}</span> {item.label}</b><p>{item.hint}</p><small>{item.done?(item.type==='app'?'In-app choice completed':'Self-reported portal review'):'Not completed'}</small></div>)}</div>
    <p className="sg-compliance-caution">{readiness.disclaimer}</p>
   </section>
-  <section className="sd-panel"><div className="sd-panelhead"><h2>Official registration and compliance services</h2><p>Follow each official site and then record that you reviewed it. This is not live API verification.</p></div>
-   {activities.filter(x=>(x.id==='cipc'?c.structure==='registered_company':x.id==='csd'?Boolean(c.governmentSupplier):true)).map(x=><div className="sg-compliance-source" key={x.id}>
+  <section className="sd-panel"><div className="sd-panelhead"><h2>Tax and supplier compliance services</h2><p>Review official tax and supplier requirements when they apply to your business.</p></div>
+   {activities.filter(x=>(x.id==='csd'?Boolean(c.governmentSupplier):true)).map(x=><div className="sg-compliance-source" key={x.id}>
     <div><strong>{x.title}</strong><small>{x.summary}</small><p>{x.description}</p><span className="sg-compliance-status">{ago(checks[x.id]?.reviewedAt)} · NOT API-VERIFIED</span></div>
     <div className="sg-compliance-buttons"><a href={COMPLIANCE_PORTALS[x.id].url} target="_blank" rel="noreferrer noopener">Open official portal ↗</a><button type="button" onClick={()=>review(x.id)}>I reviewed this on the portal</button>{checks[x.id]?.reviewedAt&&<button type="button" onClick={()=>clear(x.id)}>Clear review</button>}</div>
    </div>)}

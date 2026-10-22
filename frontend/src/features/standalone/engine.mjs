@@ -39,7 +39,7 @@ export function journey(b){
   {id:'sale',label:'Record your first sale',done:pass.financials.income>0,page:'money',why:'Build an accurate history of your income.'},
   {id:'invoice',label:'Issue an invoice',done:inv.length>0,page:'invoices',why:'Keep track of customer payments.'},
   {id:'expenses',label:'Capture a business expense',done:pass.financials.expenses>0,page:'money',why:'Know what it costs to operate.'},
-  {id:'compliance',label:'Review relevant business documents',done:Object.values(b.documents||{}).some(Boolean)||complianceDetails(b).items.some(x=>x.type==='self-reported'&&x.done),page:'compliance',why:'Review CIPC, SARS or supplier requirements through official channels; self-reported progress is not verification.'},
+  {id:'compliance',label:'Review relevant business documents',done:Object.values(b.documents||{}).some(Boolean)||complianceDetails(b).items.some(x=>x.type==='self-reported'&&x.done),page:'compliance',why:'Review SARS tax and supplier requirements through official channels; self-reported progress is not verification.'},
   {id:'opportunity',label:'Explore market and procurement resources',done:Boolean(b.reviewedOpportunities),page:'opportunities',why:'Look for real opportunities via trusted official sources.'}
  ];
  return {steps:activities,completed:activities.filter(i=>i.done).length,total:activities.length,next:activities.find(i=>!i.done)};
