@@ -5,3 +5,12 @@
 .sg-form-two{display:grid;grid-template-columns:2fr 1fr;gap:12px}.sg-cipc-disclaimer{background:#f7f4e9;border:1px solid #e9dfbf;border-radius:10px;color:#6e5a24;padding:12px;font-size:12px;line-height:1.5}
 .sg-register-progress h1,.sg-finish h1{margin-top:18px}.sg-progress-track{height:9px;border-radius:18px;background:#e5efe7;overflow:hidden;margin:20px 0}.sg-progress-track span{display:block;height:100%;background:#15805c;transition:width .4s}.sg-progress-steps{display:grid;gap:8px;margin-bottom:20px}.sg-progress-steps>div{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid #e6ece8;color:#90a49b;border-radius:11px;font-size:13px}.sg-progress-steps>div.current{background:#edf8f0;border-color:#b5dbc0;color:#174f36;font-weight:700}.sg-progress-steps>div.done{color:#24885c}.sg-practice-number{background:#e9f6eb;border:1px solid #afdabc;padding:18px;border-radius:14px;margin:16px 0}.sg-practice-number small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:#4a7565}.sg-practice-number strong{display:block;margin-top:8px;font-size:24px;letter-spacing:.04em}.sg-finish>svg{color:#208857}
 @media(max-width:420px){.sg-form-two{grid-template-columns:1fr}.sg-register-card{padding:20px 17px}}
+
+/* Read-only, device-bundled fictional registration examples; never a login shortcut. */
+.sg-local-examples{margin:15px 0 8px;border-top:1px solid #e3ebe5;padding-top:12px}
+.sg-local-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;border:1px solid #bedbca;background:#f0f8f1;color:#19563f;padding:12px;border-radius:12px;font-weight:700;cursor:pointer}
+.sg-local-list{margin-top:12px;display:grid;gap:10px}.sg-local-list>p{margin:0 0 2px;color:#66796c;font-size:12px;line-height:1.5}
+.sg-local-card{padding:14px;border:1px solid #e0e9e2;border-radius:12px;background:#fbfdfb}
+.sg-local-card h3{font-size:15px;margin:0 0 10px;color:#174b38}
+.sg-local-card dl{margin:0;display:grid;gap:7px}.sg-local-card dl>div{display:grid;grid-template-columns:minmax(92px,34%) 1fr;gap:7px}
+.sg-local-card dt{font-size:12px;color:#668275}.sg-local-card dd{margin:0;font-size:12px;overflow-wrap:anywhere;color:#25493c}

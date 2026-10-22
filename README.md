@@ -1,8 +1,8 @@
-# SmartGrowth v1.5 — One-stop Business Journey
+# SmartGrowth v1.7 — Three Local Practice Profiles
 
-SmartGrowth is a mobile-first React + Capacitor app with Firebase sign-in, offline business records, and Firestore sync. Version 1.5 includes a **fictional, account-owned practice business registry**, NOT a live CIPC integration.
+SmartGrowth is a mobile-first React + Capacitor app with Firebase sign-in, offline business records, and Firestore sync. Version 1.7 preserves the v1.6 guided registration and account-owned practice registry, while providing only three complete, device-bundled sample profiles. No Firebase demo accounts are seeded. There is no live CIPC integration.
 
-**Start here:** `docs/SMARTGROWTH_V1_5_ONE_STOP.md` for setup, Firestore rules, five test-account seeding instructions, web deployment, and Android APK build.
+**Start here:** `docs/SMARTGROWTH_V1_7_CLEAN_SEED.md` for sample profile review, signup, cloud-data safety and deployment.
 
 > **SmartGrowth v1.2:** Business Compliance Hub added. See [Compliance guide](docs/SMARTGROWTH_V1_2_COMPLIANCE.md). This release offers offline readiness checks and official portal links; it does not yet conduct automatic government registration verification.
 
@@ -14,7 +14,7 @@ SmartGrowth is a mobile-first React + Capacitor app with Firebase sign-in, offli
 
 ---
 
-> **SmartGrowthMobile Firebase setup:** The attached ZIP now includes your actual Web App settings in Git-ignored `frontend/.env.local`. See [`docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md`](docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md). Firebase Authentication and Firestore still must be enabled and rules published in your own Firebase Console. For GitHub cloud APK builds, copy the four required Web App values into Actions Variables.
+> **Firebase setup:** Add your project settings to the Git-ignored `frontend/.env.local` on your own machine. See [`docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md`](docs/SMARTGROWTHMOBILE_FIREBASE_CONNECTED.md). Firebase Authentication and Firestore still must be enabled and rules published in your own Firebase Console. For GitHub cloud APK builds, copy the four required Web App values into Actions Variables.
 
 # SmartGrowth — Offline-First Mobile + Cloud Accounts + Real Procurement Data
 

@@ -4,6 +4,7 @@
 import {initializeApp,getApps,getApp} from 'firebase/app';
 import {getAuth,setPersistence,browserLocalPersistence,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail} from 'firebase/auth';
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,onSnapshot,setDoc} from 'firebase/firestore';
+import {isDeviceOnlySample} from './local-examples.mjs';
 const config={
  apiKey:process.env.REACT_APP_FIREBASE_API_KEY,
  authDomain:process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -44,6 +45,7 @@ export function watchBusinesses(uid,callback,fail){
  },fail);
 }
 export async function uploadBusiness(uid,b){
+ if(isDeviceOnlySample(b))throw Error('Bundled practice profiles are device-only and cannot be uploaded to a Firebase account.');
  const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
  const payload=JSON.parse(JSON.stringify(b));
  if(JSON.stringify(payload).length>700000)throw Error('Business record exceeds the 700 KB sync limit. Export a backup.');

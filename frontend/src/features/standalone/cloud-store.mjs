@@ -3,6 +3,7 @@
  */
 import {blankBusiness} from './engine.mjs';
 import {validateState} from './storage.mjs';
+import {isDeviceOnlySample} from './local-examples.mjs';
 const USER_PREFIX='smartgrowth_cloud_workspace_v1_';
 const validId = value => typeof value==='string' && /^[a-zA-Z0-9_-]{3,150}$/.test(value);
 export function userKey(uid){if(!validId(uid))throw Error('Invalid cloud account identifier.');return USER_PREFIX+uid;}
@@ -70,6 +71,6 @@ export function mergeState(local,remoteBusinesses){
 export function importDeviceToCloud(cloud,device){
  validateState(device);
  const ids=new Set(cloud.businesses.map(b=>b.id));
- const extra=device.businesses.map(b=>ids.has(b.id)?{...b,id:`copy-${(typeof crypto!=='undefined' && crypto.randomUUID)?crypto.randomUUID():Date.now()}`,modifiedAt:new Date().toISOString()}: {...b,modifiedAt:new Date().toISOString()});
+ const extra=device.businesses.filter(b=>!isDeviceOnlySample(b)).map(b=>ids.has(b.id)?{...b,id:`copy-${(typeof crypto!=='undefined' && crypto.randomUUID)?crypto.randomUUID():Date.now()}`,modifiedAt:new Date().toISOString()}: {...b,modifiedAt:new Date().toISOString()});
  return validateState({...cloud,businesses:[...cloud.businesses,...extra].slice(0,100)});
 }

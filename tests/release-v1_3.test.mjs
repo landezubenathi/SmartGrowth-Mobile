@@ -6,8 +6,8 @@ import {listingPayload} from '../frontend/src/features/standalone/market-utils.m
 import {normalizeReleases} from '../frontend/src/features/standalone/treasury-data.mjs';
 import {blankBusiness,addTransaction} from '../frontend/src/features/standalone/engine.mjs';
 const b=(r)=>({...blankBusiness(r.name,r.industry,r.province),compliance:{structure:'registered_company',cipcNumber:r.number}});
-test('five fictional matching records, none implying genuine verification',()=>{
- assert.equal(DEMO_REGISTRY.length,5);
+test('three fictional local matching records, none implying genuine verification',()=>{
+ assert.equal(DEMO_REGISTRY.length,3);
  for(const r of DEMO_REGISTRY){const m=demoRegistryMatch(b(r));assert.equal(m.status,'demo-match');assert.match(m.message,/NOT officially verified/i);}
 });
 test('mismatch name/number/province never verifies',()=>{

@@ -10,7 +10,7 @@ This release builds on v1.5. It preserves the Firebase Authentication workspace,
 4. Firebase Authentication creates a genuine SmartGrowth account; a Firestore business record and private simulated-registry record are created with a **practice registration reference**. This is NOT a CIPC registration number or evidence of legal company registration.
 5. The screen displays the practice reference. Select **Continue to sign in** and log in with the new SmartGrowth email/password.
 6. Home and Business Profile show the new business; Business Profile shows the original registration fields as read-only. Account owners can still manage finances, invoices and other working tools.
-7. Existing five seeded user accounts remain supported. Their stored record fields appear after login; fields not present in earlier registry records are not invented.
+7. Previously created Firebase accounts remain supported. New releases no longer create test Firebase accounts; three fictional profiles are available read-only on the welcome screen.
 
 ## Sensitive-data treatment
 
@@ -45,7 +45,7 @@ No Firestore rules update is required from v1.5: the existing `users/{uid}/busin
 - Sign in with that email/password: correct business name, owner/director, address, description, industry and reference appear.
 - Business Profile displays original registry details without an edit option for practice-registered records.
 - Logout/login does not duplicate the business. Another user cannot see private business records.
-- Five preloaded existing accounts still log in and populate their registered names and references.
+- Existing real Firebase accounts still log in. Three fictional local profiles do not have login passwords.
 - Bookkeeping, Journey, market listings, Passport and Intelligence still work; saved offline changes resync to the signed-in workspace.
 
 **Verification:** JavaScript unit/regression suite and TypeScript JSX parser run locally. Firebase live registration, React production build, cloud deployment and APK installation must be tested with your configured project.

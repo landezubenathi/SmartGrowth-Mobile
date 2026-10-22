@@ -3,6 +3,7 @@ import {accountLogin,resetPassword,accountLogout} from './cloud-firebase';
 import {INDUSTRIES,PROVINCES} from './catalog.mjs';
 import {ONBOARDING_STEPS} from './onboarding.mjs';
 import SmartIcon from './SmartIcon';
+import {LOCAL_SAMPLE_PROFILES} from './local-examples.mjs';
 import './account-gateway.css';
 const fresh={email:'',password:'',businessName:'',structure:'registered_company',industry:'Catering',province:'Eastern Cape',street:'',city:'',postalCode:'',directorName:'',directorId:'',description:''};
 export default function AccountGateway({configured=true,loading=false,onRegister,onFinishRegistration}){
@@ -13,6 +14,7 @@ export default function AccountGateway({configured=true,loading=false,onRegister
  const [completedNumber,setCompletedNumber]=useState('');
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ const [showSamples,setShowSamples]=useState(false);
  const change=(field,value)=>setDraft(old=>({...old,[field]:value}));
  async function submit(e){
   e.preventDefault();setBusy(true);setError('');setNotice('');
@@ -69,6 +71,24 @@ export default function AccountGateway({configured=true,loading=false,onRegister
      <button className="sd-btn" type="submit" disabled={busy}>{busy?'Processing…':register?'Register business':'Sign in'}</button>
     </form>
     <div className="sg-access-actions"><button type="button" onClick={()=>{setRegister(!register);setError('');}}>{register?'Already registered? Sign in':'New here? Register your business'}</button>{!register&&<button type="button" onClick={async()=>{setError('');setNotice('');if(!draft.email.trim()){setError('Enter your email first.');return;}try{await resetPassword(draft.email);setNotice('If this account exists, a password reset email will be sent.');}catch(err){setError(err.message);}}}>Forgot password?</button>}</div>
+    {!register&&<section className="sg-local-examples" aria-label="Local practice profiles">
+     <button type="button" className="sg-local-toggle" aria-expanded={showSamples} onClick={()=>setShowSamples(x=>!x)}>
+      {showSamples?'Hide':'View'} three local example business profiles <SmartIcon name="business" size={16}/>
+     </button>
+     {showSamples&&<div className="sg-local-list">
+      <p>These fictional profiles demonstrate the information collected during registration. They are read-only, stored in this app and cannot be used to sign in or claim CIPC registration.</p>
+      {LOCAL_SAMPLE_PROFILES.map(profile=><article key={profile.id} className="sg-local-card">
+       <h3>{profile.name}</h3>
+       <dl>
+        <div><dt>Type</dt><dd>{profile.structure.replaceAll('_',' ')} · {profile.industry}</dd></div>
+        <div><dt>Owner / director</dt><dd>{profile.owner}</dd></div>
+        <div><dt>Business address</dt><dd>{profile.address.street}, {profile.address.city}, {profile.address.province} {profile.address.postalCode}</dd></div>
+        <div><dt>Practice reference</dt><dd>{profile.practiceReference}</dd></div>
+        <div><dt>Description</dt><dd>{profile.description}</dd></div>
+       </dl>
+      </article>)}
+     </div>}
+    </section>}
    </>}
   </>}
   {error&&<div className="sd-error" role="alert">{error}</div>}{notice&&<div className="sd-notice" role="status">{notice}</div>}

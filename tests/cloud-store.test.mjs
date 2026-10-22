@@ -38,10 +38,10 @@ test('offline transaction is preserved when remote profile is newer',()=>{
  assert.equal(m.state.businesses[0].transactions.length,1);
  assert.ok(m.needUpload.length>0);
 });
-test('separate device examples only enter cloud on explicit import',()=>{
+test('bundled local examples never enter an account, even through the explicit import helper',()=>{
  const base=emptyCloudState();assert.equal(base.businesses.length,1);
  const copied=importDeviceToCloud(base,starterState());
- assert.equal(copied.businesses.length,3);
+ assert.equal(copied.businesses.length,1);
  assert.equal(base.businesses.length,1);
 });
 
