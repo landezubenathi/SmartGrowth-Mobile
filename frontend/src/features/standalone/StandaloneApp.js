@@ -10,7 +10,7 @@ import BusinessIntelligence from './BusinessIntelligence';
 import ComplianceHub from './ComplianceHub';
 import FloatingAssistant from './FloatingAssistant';
 import SharedMarketplace from './SharedMarketplace';
-import {demoRegistryMatch} from './demo-registry.mjs';
+import {registryStatus} from './registry-status.mjs';
 import {PRACTICE_SOURCE,practiceRegistrationNumber,validateRegistrationInput,registrationFromBusiness,attachRegisteredBusinesses,REGISTRY_NOTICE} from './mock-registry.mjs';
 import {validateOnboarding,makeOnboardedBusiness} from './onboarding.mjs';
 import AccountGateway from './AccountGateway';
@@ -212,7 +212,7 @@ export default function StandaloneApp(){
  return <div className="sd-shell">
   <header className="sd-topbar"><div className="sd-topinner"><button className="sd-brand" onClick={()=>go('home')} aria-label="SmartGrowth home"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></button><span className="sd-mode"><SmartIcon name={workspace==='cloud'?'cloud':'check'} size={15}/> {workspace==='cloud'?'SYNC ENABLED':'OFFLINE READY'}</span></div></header>
   <div className="sd-content">
-   <div className="sd-businessbar"><div><small>{workspace==='cloud'?'MY BUSINESS':'MY WORKSPACE'}</small><strong>{current.name}</strong><span>{current.industry} · {current.region}</span>{current.compliance?.cipcNumber&&<span>Registration reference: {current.compliance.cipcNumber}</span>}<span className={demoRegistryMatch(current).status==='demo-match'?'sg-demo-status matched':'sg-demo-status'}>{current.registrySource===PRACTICE_SOURCE?'Practice registry record · not CIPC verified':demoRegistryMatch(current).status==='demo-match'?'Practice registry match · not CIPC verified':'CIPC status unverified'}</span></div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+   <div className="sd-businessbar"><div><small>{workspace==='cloud'?'MY BUSINESS':'MY WORKSPACE'}</small><span title={registryStatus(current).detail} className={`sg-demo-status ${registryStatus(current).style}`}>{registryStatus(current).label}</span><strong>{current.name}</strong><span>{current.industry} · {current.region}</span>{current.compliance?.cipcNumber&&<span>Registration reference: {current.compliance.cipcNumber}</span>}</div><select aria-label="Switch business" value={current.id} onChange={e=>{update(s=>({...s,activeId:e.target.value}), 'Switched business workspace.');go('home')}}>{state.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
    {notice&&<Notice>{notice} <button aria-label="Dismiss notice" onClick={()=>setNotice('')}>×</button></Notice>}
    {error&&<div className="sd-error" role="alert">{error}</div>}
    {createBusiness?<Pane title="Add another business" subtitle="Create a private business workspace using your own information."><BusinessForm practice onSave={d=>create(d,false)} onCancel={()=>setCreateBusiness(false)}/></Pane>:null}
@@ -267,6 +267,7 @@ export default function StandaloneApp(){
    {!createBusiness&&page==='compliance'&&<ComplianceHub business={current} onChange={patchBusiness}/>}
    {!createBusiness&&page==='business'&&<><div className="sd-heading"><small>BUSINESS PROFILE</small><h1>Every business is different.</h1><p>Personalise SmartGrowth for your type of business, from a spaza shop to a software studio.</p></div>
     <Pane title={current.name} subtitle={`${current.industry} · ${current.region}`}>
+      <span title={registryStatus(current).detail} className={`sg-demo-status ${registryStatus(current).style}`}>{registryStatus(current).label}</span>
       <p>{current.description||'No business description was supplied.'}</p>
       {current.registrationDetails&&<div className="sg-readonly-details">
        <p><b>Business structure:</b> {String(current.registrationDetails.structure||'').replaceAll('_',' ')}</p>
@@ -302,7 +303,7 @@ export default function StandaloneApp(){
    {!createBusiness&&page==='more'&&<><div className="sd-heading"><small>WORKSPACE & SETTINGS</small><h1>Make SmartGrowth yours.</h1><p>Manage your business, account and preferences.</p></div>
     <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','business','My businesses'],['compliance','compliance','Business compliance'],['invoices','invoices','Invoices'],['intelligence','intelligence','My Intelligence'],['shield','shield','SmartShield'],['market','market','Market Links'],['insights','insights','Live Insights'],['opportunities','opportunities','Procurement'],['sources','sources','Official Sources']].map(([id,icon,label])=><button onClick={()=>go(id)} key={id}><span><SmartIcon name={icon}/></span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Add or switch businesses" subtitle="Every business has its own finances, invoices, Passport and Journey."><div className="sd-businesslist">{state.businesses.map(b=><button key={b.id} className={b.id===current.id?'current':''} onClick={()=>{update(s=>({...s,activeId:b.id}));go('home')}}>{b.name} <small>{b.industry} · {b.region}</small></button>)}</div><Btn light onClick={()=>setCreateBusiness(true)}>+ Create another business</Btn></Pane>
-    <Pane title="App version"><p className="sd-muted"><strong>SmartGrowth v1.6.0</strong></p><p className="sd-muted">Your companion for starting, managing and growing your business. Made by Four Horsemen Tech.</p></Pane>
+    <Pane title="App version"><p className="sd-muted"><strong>SmartGrowth v1.7.1</strong></p><p className="sd-muted">Your companion for starting, managing and growing your business. Made by Four Horsemen Tech.</p></Pane>
     <Pane title="About information in SmartGrowth"><p className="sd-muted">Company registry matches use fictional practice records and are not official CIPC confirmations. Procurement practice briefs are learning exercises. SmartGrowth does not process real payments. Official National Treasury records are labelled with their source and retrieval date.</p><p className="sd-muted">Personal insights are based on business records you enter. Cloud sign-in allows your account data to sync when you are connected; previously saved records remain available offline.</p></Pane>
     <Pane title="Backup and device privacy" subtitle="Keep a personal backup of your business records."><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div></Pane>
     
