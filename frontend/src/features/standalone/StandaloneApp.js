@@ -12,10 +12,11 @@ import FloatingAssistant from './FloatingAssistant';
 import SharedMarketplace from './SharedMarketplace';
 import {demoRegistryMatch} from './demo-registry.mjs';
 import {PRACTICE_SOURCE,practiceRegistrationNumber,validateRegistrationInput,registrationFromBusiness,attachRegisteredBusinesses,REGISTRY_NOTICE} from './mock-registry.mjs';
+import {validateOnboarding,makeOnboardedBusiness} from './onboarding.mjs';
 import AccountGateway from './AccountGateway';
 import {complianceDetails} from './compliance.mjs';
 import {analyzeBusiness} from './intelligence.mjs';
-import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness,watchPracticeRegistry,createPracticeRegistryRecord} from './cloud-firebase';
+import {firebaseConfigured,observeLogin,watchBusinesses,uploadBusiness,watchPracticeRegistry,createPracticeRegistryRecord,accountLogin,accountLogout} from './cloud-firebase';
 import {loadCloudState,saveCloudState,mergeState} from './cloud-store.mjs';
 import SmartIcon from './SmartIcon';
 import './standalone.css';
@@ -49,6 +50,8 @@ export default function StandaloneApp(){
  const [page,setPage]=useState('home');
  const [cloudUser,setCloudUser]=useState(null);
  const [authReady,setAuthReady]=useState(false);
+ const [registrationLocked,setRegistrationLocked]=useState(false);
+ const registering=useRef(false);
  const [registryLoading,setRegistryLoading]=useState(true);
  const [businessLoading,setBusinessLoading]=useState(true);
  const [workspace,setWorkspace]=useState('device');
@@ -164,9 +167,45 @@ export default function StandaloneApp(){
   const restored=parseBackup(await file.text());if(!window.confirm('Replace ALL standalone data on this device with this backup? Your current local records will be overwritten.'))return;
   if(workspace==='cloud'&&cloudUid){update(()=>restored,'Backup restored to cloud workspace; preparing to sync.');}else{setState(saveState(restored));setNotice('Backup restored from your file.');}setError('');go('home');}catch(err){setError(err.message);}finally{e.target.value='';}}
  function downloadBackup(){const raw=exportState(state);const blob=new Blob([raw],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`smartgrowth-device-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);setNotice('Backup downloaded. Keep the file somewhere secure.');}
+ async function registerFromGateway(form,onProgress){
+  const values=validateOnboarding(form); // verifies format locally; does not contact CIPC or store the ID.
+  registering.current=true;
+  setRegistrationLocked(true);
+  let createdAccount=false;
+  const pause=()=>new Promise(resolve=>setTimeout(resolve,650));
+  try{
+   onProgress(0);await pause();
+   onProgress(1);await pause();
+   const credentials=await accountLogin(values.email,values.password,true);
+   createdAccount=true;
+   onProgress(2);await pause();
+   const uid=credentials.user.uid;
+   const business=makeOnboardedBusiness(values);
+   const record=registrationFromBusiness(business,uid,values.email);
+   onProgress(3);await pause();
+   onProgress(4);await pause();
+   // These are real Firestore writes to an account-owned *practice* registry, NOT to CIPC.
+   // Save the completed record first; snapshots must never replace it with a partial registry import.
+   const local={version:1,activeId:business.id,businesses:[business],updatedAt:new Date().toISOString()};
+   saveCloudState(uid,local);setState(local);
+   await uploadBusiness(uid,business);
+   await createPracticeRegistryRecord(uid,record);
+   onProgress(5);await pause();
+   return business;
+  }catch(err){
+   // An Auth account might already exist if Firestore failed. Sign out and recover through login.
+   if(createdAccount){try{await accountLogout();}catch(_){/* display original error */}}
+   registering.current=false;setRegistrationLocked(false);
+   throw Error(createdAccount?'Your SmartGrowth account was created, but business saving did not complete. Sign in and complete your business profile. Details: '+err.message:err.message);
+  }
+ }
+ async function finishRegistration(){
+  await accountLogout();
+  setCloudUser(null);setWorkspace('device');registering.current=false;setRegistrationLocked(false);setRegistryLoading(false);setBusinessLoading(false);
+ }
  const taxSource=OFFICIAL_SOURCES.find(x=>x.id==='sars');
  if(!firebaseConfigured)return <AccountGateway configured={false}/>;
- if(!authReady||!cloudUser)return <AccountGateway configured={true} loading={!authReady}/>;
+ if(registrationLocked||!authReady||!cloudUser)return <AccountGateway configured={true} loading={!authReady&&!registrationLocked} onRegister={registerFromGateway} onFinishRegistration={finishRegistration}/>;
  const needsBusiness=state.businesses.length===1 && state.businesses[0].isPlaceholder && !state.businesses[0].transactions.length && !state.businesses[0].invoices.length && !state.businesses[0].listings.length;
  if(needsBusiness && (registryLoading||businessLoading))return <AccountGateway configured={true} loading={true}/>;
  if(needsBusiness && !registryLoading && !businessLoading && !createBusiness)return <div className="sd-shell"><header className="sd-topbar"><div className="sd-topinner"><div className="sd-brand"><span className="sd-mark">↗</span><span>Smart<b>Growth</b><small>YOUR BUSINESS JOURNEY</small></span></div><span className="sd-mode">ACCOUNT READY</span></div></header><main className="sd-content"><div className="sd-registry-welcome"><span className="sd-label">WELCOME, {cloudUser.email}</span><h1>Let's set up your business.</h1><p>No business records are linked to this account yet. If your test account was preloaded into the simulated registry, they will be retrieved automatically. Otherwise, complete your business information below.</p><div className="sd-registry-caution">{REGISTRY_NOTICE} Use your SmartGrowth credentials; never enter your actual BizPortal password.</div><BusinessForm practice onSave={d=>create(d)} onCancel={null}/></div></main></div>;
@@ -227,7 +266,18 @@ export default function StandaloneApp(){
    </>}
    {!createBusiness&&page==='compliance'&&<ComplianceHub business={current} onChange={patchBusiness}/>}
    {!createBusiness&&page==='business'&&<><div className="sd-heading"><small>BUSINESS PROFILE</small><h1>Every business is different.</h1><p>Personalise SmartGrowth for your type of business, from a spaza shop to a software studio.</p></div>
-    <Pane title={current.name} subtitle={`${current.industry} · ${current.region}`}><p>{current.description||'Add a description to your profile.'}</p><div className="sd-actions"><Btn onClick={()=>setEditBusiness(!editBusiness)}>{editBusiness?'Close':'Edit profile'}</Btn><Btn light onClick={()=>setCreateBusiness(true)}>Add another business</Btn></div>{editBusiness&&<BusinessForm initial={current} onSave={edit} onCancel={()=>setEditBusiness(false)}/>}</Pane>
+    <Pane title={current.name} subtitle={`${current.industry} · ${current.region}`}>
+      <p>{current.description||'No business description was supplied.'}</p>
+      {current.registrationDetails&&<div className="sg-readonly-details">
+       <p><b>Business structure:</b> {String(current.registrationDetails.structure||'').replaceAll('_',' ')}</p>
+       <p><b>Registered business address:</b> {[current.registrationDetails.address?.street,current.registrationDetails.address?.city,current.registrationDetails.address?.province,current.registrationDetails.address?.postalCode].filter(Boolean).join(', ')}</p>
+       <p><b>Owner / director:</b> {current.registrationDetails.directorName}</p>
+       <p><b>SmartGrowth practice reference:</b> {current.compliance?.cipcNumber||'Not recorded'}</p>
+       <p className="sd-muted">Registration details are read-only. This is a SmartGrowth practice reference, not an official CIPC registration.</p>
+      </div>}
+      <div className="sd-actions">{current.registrySource!==PRACTICE_SOURCE&&<Btn onClick={()=>setEditBusiness(!editBusiness)}>{editBusiness?'Close':'Edit profile'}</Btn>}<Btn light onClick={()=>setCreateBusiness(true)}>Add another business</Btn></div>
+      {editBusiness&&current.registrySource!==PRACTICE_SOURCE&&<BusinessForm initial={current} onSave={edit} onCancel={()=>setEditBusiness(false)}/>}
+    </Pane>
     <Pane title="Official registration guidance" subtitle="You can now track official registration steps in one place."><div className="sd-actions"><Btn onClick={()=>go('compliance')}>Open Business Compliance Hub →</Btn></div>{OFFICIAL_SOURCES.slice(0,3).map(s=><div className="sd-source" key={s.id}><div><b>{s.name}</b><p>{s.detail}</p></div><InlineLink href={s.url}>Open official site</InlineLink></div>)}</Pane>
    </>}
    {!createBusiness&&page==='shield'&&<><div className="sd-heading"><small>SMARTSHIELD</small><h1>Spot the warning signs.</h1><p>Review warning signs, learn safer practices and track your protection progress.</p></div><Pane title="Check a suspicious message"><form className="sd-form" onSubmit={e=>{e.preventDefault();const result=fraudCheck(scanText);setScan(result);patchBusiness(b=>({...b,security:{...b.security,scans:(b.security?.scans||0)+1,highRiskScans:(b.security?.highRiskScans||0)+(result.signals.length>=2?1:0),lastLevel:result.level,lastScanAt:new Date().toISOString()}}),'Message reviewed. Protection journey updated.');}}><label>Paste a message<textarea rows={5} required minLength={3} maxLength={10000} value={scanText} onChange={e=>setScanText(e.target.value)} placeholder="Paste a suspicious funding, invoice or payment message…"/></label><Btn type="submit">Check this message</Btn></form></Pane>{scan&&<Pane title={scan.level}><div className="sd-steps">{scan.signals.length?scan.signals.map(s=><div key={s} className="sd-flag"><SmartIcon name="warning" size={16}/> {s}</div>):<p>No obvious signs were detected. This does not prove the message is safe.</p>}</div><p>{scan.recommendation}</p></Pane>}
@@ -252,7 +302,7 @@ export default function StandaloneApp(){
    {!createBusiness&&page==='more'&&<><div className="sd-heading"><small>WORKSPACE & SETTINGS</small><h1>Make SmartGrowth yours.</h1><p>Manage your business, account and preferences.</p></div>
     <Pane title="Explore more tools"><div className="sd-shortcuts">{[['business','business','My businesses'],['compliance','compliance','Business compliance'],['invoices','invoices','Invoices'],['intelligence','intelligence','My Intelligence'],['shield','shield','SmartShield'],['market','market','Market Links'],['insights','insights','Live Insights'],['opportunities','opportunities','Procurement'],['sources','sources','Official Sources']].map(([id,icon,label])=><button onClick={()=>go(id)} key={id}><span><SmartIcon name={icon}/></span>{label}<b>↗</b></button>)}</div></Pane>
     <Pane title="Add or switch businesses" subtitle="Every business has its own finances, invoices, Passport and Journey."><div className="sd-businesslist">{state.businesses.map(b=><button key={b.id} className={b.id===current.id?'current':''} onClick={()=>{update(s=>({...s,activeId:b.id}));go('home')}}>{b.name} <small>{b.industry} · {b.region}</small></button>)}</div><Btn light onClick={()=>setCreateBusiness(true)}>+ Create another business</Btn></Pane>
-    <Pane title="App version"><p className="sd-muted"><strong>SmartGrowth v1.5.0</strong></p><p className="sd-muted">Your companion for starting, managing and growing your business. Made by Four Horsemen Tech.</p></Pane>
+    <Pane title="App version"><p className="sd-muted"><strong>SmartGrowth v1.6.0</strong></p><p className="sd-muted">Your companion for starting, managing and growing your business. Made by Four Horsemen Tech.</p></Pane>
     <Pane title="About information in SmartGrowth"><p className="sd-muted">Company registry matches use fictional practice records and are not official CIPC confirmations. Procurement practice briefs are learning exercises. SmartGrowth does not process real payments. Official National Treasury records are labelled with their source and retrieval date.</p><p className="sd-muted">Personal insights are based on business records you enter. Cloud sign-in allows your account data to sync when you are connected; previously saved records remain available offline.</p></Pane>
     <Pane title="Backup and device privacy" subtitle="Keep a personal backup of your business records."><p className="sd-muted">Export regularly before uninstalling the app, clearing browser data or switching phones. Backups contain business details in readable JSON.</p><div className="sd-actions"><Btn onClick={downloadBackup}>↓ Export data</Btn><Btn light onClick={()=>fileRef.current?.click()}>↑ Restore backup</Btn><input hidden ref={fileRef} type="file" accept="application/json,.json" onChange={restoreFile}/></div></Pane>
     
