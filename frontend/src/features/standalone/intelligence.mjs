@@ -92,7 +92,7 @@ export function analyzeBusiness(b, now=new Date()){
   `Your illustrative readiness is ${pass.score}/100. Complete applicable steps and only declare documents you actually have.`,
   'passport',`${pass.autoPoints}/60 automatic points`);
  if(!b.listings?.length)add('listings','info','Prepare a customer-facing offer',
-  'Describe your product or service clearly to prepare for market access. On-device listings are not publicly published.',
+  'Describe your product or service clearly to prepare for market access. Publish a saved listing from your signed-in cloud workspace to reach other SmartGrowth users.',
   'market','No saved listings');
  if(!b.reviewedOpportunities)add('opportunities','info','Explore verified public opportunities',
   'Review National Treasury procurement records and check notices and deadlines at the original source.',

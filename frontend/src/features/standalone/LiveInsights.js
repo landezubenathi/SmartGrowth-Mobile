@@ -1,3 +1,4 @@
+import SmartIcon from './SmartIcon';
 import React,{useEffect,useState} from 'react';
 import {PUBLIC_DATA_SOURCES,readLiveCache,refreshLiveInsights,contextualTips} from './live-data.mjs';
 const FEEDS=[['weather','Local weather'],['fx','Exchange rate'],['inflation','SA inflation']];
@@ -40,7 +41,7 @@ export default function LiveInsights({region,industry}){
    <p className="sd-live-caption" role="status">{loading?'Contacting public data providers…':hasData?'Source-specific dates are shown above. Saved values may be stale.':attempted?'No external information could be loaded. Connect to the internet and choose Refresh data.':'Checking available external data…'}</p>
   </section>
   <section className="sd-panel"><div className="sd-panelhead"><h2>What this means for {industry.toLowerCase()}</h2><p>Planning prompts based on available external observations—not forecasts of your business's future income.</p></div>
-   {tips.length?<div className="sd-live-tips">{tips.map((t,i)=><div key={i}><span>✦</span><p>{t}</p></div>)}</div>:<p className="sd-empty">Refresh the public data for contextual suggestions. Your Growth Advisor still works with saved business records.</p>}
+   {tips.length?<div className="sd-live-tips">{tips.map((t,i)=><div key={i}><span><SmartIcon name="intelligence" size={18}/></span><p>{t}</p></div>)}</div>:<p className="sd-empty">Refresh the public data for contextual suggestions. Your Growth Advisor still works with saved business records.</p>}
   </section>
   <section className="sd-panel"><div className="sd-panelhead"><h2>Real opportunities and registrations</h2><p>Official websites, not API-integrated tenders or automatic verification.</p></div>
    <div className="sd-live-links">
