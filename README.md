@@ -51,3 +51,7 @@ Run the `.github/workflows/smartgrowth-android.yml` workflow on GitHub to produc
 - `backend/`: **legacy optional** FastAPI workflows kept for reference; not needed by the current app
 
 **Not implemented:** real money transfers, independent CIPC/SARS verification, fraud-model AI, authorised procurement applications. Readiness scoring and advice are explainable rules-based estimates. No cloud project or API key has been created on your behalf.
+
+## v1.6 first-open registration
+
+New entrepreneurs can register their SmartGrowth account and business in one screen, see a short simulated CIPC-style progress journey and receive a SmartGrowth **practice** reference before signing in. This is never real CIPC registration. See `docs/SMARTGROWTH_V1_6_REGISTRATION.md` for instructions, privacy considerations and release tests.
