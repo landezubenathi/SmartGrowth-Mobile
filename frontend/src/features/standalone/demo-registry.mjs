@@ -5,9 +5,7 @@
 export const DEMO_REGISTRY = Object.freeze([
  {name:'Litha Catering Studio',number:'2026/840201/07',province:'Eastern Cape',industry:'Catering'},
  {name:'BrightCode Digital Services',number:'2026/840202/07',province:'Gauteng',industry:'Technology'},
- {name:'Makhulu Fresh Produce',number:'2026/840203/07',province:'Limpopo',industry:'Agriculture'},
- {name:'Ubuntu Home Repairs',number:'2026/840204/07',province:'KwaZulu-Natal',industry:'Construction'},
- {name:'Sisonke Beauty Collective',number:'2026/840205/07',province:'Western Cape',industry:'Beauty & Wellness'}
+ {name:'Makhulu Fresh Produce',number:'2026/840203/07',province:'Limpopo',industry:'Agriculture'}
 ]);
 const norm=s=>String(s||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('en-ZA');
 export const isEnterpriseNumber=s=>/^\d{4}\/\d{6}\/\d{2}$/.test(String(s||'').trim());

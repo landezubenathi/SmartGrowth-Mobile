@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {blankBusiness, sampleBusiness, addTransaction, addInvoice, markInvoicePaid, passport, financials, journey, fraudCheck, matches} from '../frontend/src/features/standalone/engine.mjs';
 import {starterState,exportState,parseBackup} from '../frontend/src/features/standalone/storage.mjs';
 test('seeds distinct sample businesses with explicitly fictional data',()=>{
- const state=starterState();assert.equal(state.businesses.length,2);assert.notEqual(state.businesses[0].id,state.businesses[1].id);
+ const state=starterState();assert.equal(state.businesses.length,3);assert.notEqual(state.businesses[0].id,state.businesses[1].id);
  assert.ok(state.businesses[0].transactions.every(x=>x.sample));
 });
 test('new any-sector business starts with empty financial records',()=>{
