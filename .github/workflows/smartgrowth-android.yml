@@ -38,7 +38,7 @@ jobs:
           npm audit --json > npm-audit-security.json || true
       - name: Upload npm audit for security review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smartgrowth-npm-security-audit
           path: frontend/npm-audit-security.json
@@ -50,7 +50,7 @@ jobs:
           node --test --test-concurrency=1 --test-reporter=tap tests/*.test.mjs 2>&1 | tee smartgrowth-test-results.log
       - name: Upload test report even when tests fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smartgrowth-test-results
           path: smartgrowth-test-results.log
@@ -76,7 +76,7 @@ jobs:
           REACT_APP_TREASURY_PROXY_URL: ${{ vars.REACT_APP_TREASURY_PROXY_URL }}
         run: npm run build
       - name: Upload installable web bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smartgrowth-static-web
           path: frontend/build
@@ -91,7 +91,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smartgrowth-debug-apk
           path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
