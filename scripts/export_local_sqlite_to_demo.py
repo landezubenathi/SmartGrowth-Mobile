@@ -16,18 +16,10 @@ def export_one(db_path: Path, user_id: str):
     con.row_factory = sqlite3.Row
     try:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        # Allowlisted queries: never interpolate a table identifier into a SQL statement.
-        queries = {
-            'business_profiles': 'SELECT * FROM business_profiles WHERE user_id=?',
-            'transactions': 'SELECT * FROM transactions WHERE user_id=?',
-            'invoices': 'SELECT * FROM invoices WHERE user_id=?',
-            'documents': 'SELECT * FROM documents WHERE user_id=?',
-            'market_listings': 'SELECT * FROM market_listings WHERE user_id=?',
-        }
         def rows(table):
-            if table not in tables or table not in queries:
+            if table not in tables:
                 return []
-            return [dict(r) for r in con.execute(queries[table], (user_id,))]
+            return [dict(r) for r in con.execute(f'SELECT * FROM {table} WHERE user_id=?', (user_id,))]
         profile = rows('business_profiles')
         if not profile and not rows('transactions') and not rows('invoices'):
             raise SystemExit(f'No records found for account {user_id!r} in the selected database.')
