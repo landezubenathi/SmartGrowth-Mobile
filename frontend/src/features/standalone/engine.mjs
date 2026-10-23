@@ -22,6 +22,16 @@ export function passport(b){
  return {score:autoPoints+documentPoints,autoPoints,documentPoints,automatic,manual,financials:f,
  disclaimer:'Illustrative, unverified readiness indicator. Not a credit score, official compliance check or promise of funding.'};
 }
+export function protectionJourney(b){
+ const scans=Number(b.security?.scans||0),risk=Number(b.security?.highRiskScans||0);
+ const steps=[
+  {id:'scan',label:'Screen a suspicious message',done:scans>0,page:'shield',why:'Use SmartShield to examine a message and understand its warning signs.'},
+  {id:'security',label:'Review fraud prevention tips',done:Boolean(b.security?.reviewedTips),page:'shield',why:'Learn why OTPs, urgent fees and unfamiliar payment links are risky.'},
+  {id:'contact',label:'Check an organisation through its official channel',done:Boolean(b.security?.reviewedContacts),page:'shield',why:'Confirm funding offers and supplier contact details independently.'},
+  {id:'followup',label:'Review flagged risks and next steps',done:scans>0 && Boolean(b.security?.reviewedScans),page:'shield',why:risk>0?`${risk} scan(s) raised multiple warning signs. Review your response before acting.`:'Review the screening result, even if no obvious warning was found.'}
+ ];
+ return {steps,completed:steps.filter(i=>i.done).length,total:steps.length,next:steps.find(i=>!i.done)};
+}
 export function journey(b){
  const pass=passport(b),inv=b.invoices||[];
  const activities=[
@@ -29,7 +39,7 @@ export function journey(b){
   {id:'sale',label:'Record your first sale',done:pass.financials.income>0,page:'money',why:'Build an accurate history of your income.'},
   {id:'invoice',label:'Issue an invoice',done:inv.length>0,page:'invoices',why:'Keep track of customer payments.'},
   {id:'expenses',label:'Capture a business expense',done:pass.financials.expenses>0,page:'money',why:'Know what it costs to operate.'},
-  {id:'compliance',label:'Review relevant business documents',done:Object.values(b.documents||{}).some(Boolean)||complianceDetails(b).items.some(x=>x.type==='self-reported'&&x.done),page:'compliance',why:'Review CIPC, SARS or supplier requirements through official channels; self-reported progress is not verification.'},
+  {id:'compliance',label:'Review relevant business documents',done:Object.values(b.documents||{}).some(Boolean)||complianceDetails(b).items.some(x=>x.type==='self-reported'&&x.done),page:'compliance',why:'Review SARS tax and supplier requirements through official channels; self-reported progress is not verification.'},
   {id:'opportunity',label:'Explore market and procurement resources',done:Boolean(b.reviewedOpportunities),page:'opportunities',why:'Look for real opportunities via trusted official sources.'}
  ];
  return {steps:activities,completed:activities.filter(i=>i.done).length,total:activities.length,next:activities.find(i=>!i.done)};

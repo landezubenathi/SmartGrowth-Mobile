@@ -29,7 +29,6 @@ export function complianceDetails(business){
  const purchasing=Boolean(c.governmentSupplier);
  const required=[
   {id:'structure',label:'Choose your business structure',done:structure!=='unsure',type:'app',hint:'Choose the legal form that fits the business; registering a company is not compulsory for every sole trader.'},
-  ...(structure==='registered_company'?[{id:'cipc',label:'Review your CIPC company record',done:Boolean(checks.cipc?.reviewedAt),type:'self-reported',hint:'Confirm the enterprise details by signing in to BizPortal or an authorised service.'}]:[]),
   {id:'sars',label:'Review applicable SARS tax obligations',done:Boolean(checks.sars?.reviewedAt),type:'self-reported',hint:'Check the official SARS guidance. Do not enter your tax PIN into SmartGrowth.'},
   ...(purchasing?[{id:'csd',label:'Review CSD supplier registration',done:Boolean(checks.csd?.reviewedAt),type:'self-reported',hint:'Confirm your MAAA number and supplier report using CSD.'}]:[])
  ];

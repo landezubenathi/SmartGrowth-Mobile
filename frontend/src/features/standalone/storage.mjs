@@ -1,10 +1,10 @@
-import {sampleBusiness} from './engine.mjs';
+import {localSampleBusinesses} from './local-examples.mjs';
 export const STORE_KEY='smartgrowth_standalone_device_v1';
 export function starterState(){
- const one=sampleBusiness('Catering','Eastern Cape','Litha Catering (Sample)');
- const two=sampleBusiness('Technology','Eastern Cape','BrightCode Studio (Sample)');
- return {version:1,activeId:one.id,businesses:[one,two],updatedAt:new Date().toISOString()};
+ const businesses=localSampleBusinesses();
+ return {version:1,activeId:businesses[0].id,businesses,updatedAt:new Date().toISOString()};
 }
+
 export function validateState(value){
  if(!value||value.version!==1||!Array.isArray(value.businesses)||value.businesses.length===0||value.businesses.length>100)throw Error('Unsupported backup format.');
  if(!value.businesses.some(b=>b.id===value.activeId))throw Error('Backup references a missing active business.');

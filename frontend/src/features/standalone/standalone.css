@@ -25,6 +25,34 @@
 .sd-cloud-status small{color:#617e6d;font-size:11px;line-height:1.5}
 .sd-cloud .sd-btn{white-space:normal;text-align:center;max-width:100%;overflow-wrap:anywhere}
 .sd-cloud code{font-size:12px;overflow-wrap:anywhere}
-/* V1.2.1 unified navigation, marketplace, and assistant */
-.sd-top-actions{display:flex;align-items:center;gap:10px}.sd-bell{position:relative;min-height:40px;min-width:40px;display:grid;place-items:center;background:#eff6ee;color:#235d43;border:1px solid #d3e8d7;border-radius:12px}.sd-bell sup{position:absolute;top:-4px;right:-4px;background:#c24e32;color:white;border-radius:30px;padding:2px 5px;font-size:10px;font-weight:800}.sd-mark{display:grid;place-items:center;min-width:41px;min-height:41px}.sd-bottom span{display:flex;justify-content:center;align-items:center}.sd-shortcuts button>span{display:inline-flex;align-items:center}.sd-assistant-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}.sd-assistant-head>svg{color:#166a4b;flex-shrink:0}.sd-assistant-head strong,.sd-assistant-head small{display:block}.sd-assistant-head small{font-size:12px;color:#70877a;margin-top:4px}.sd-assistant-conversation{display:flex;flex-direction:column;gap:12px;max-height:400px;min-height:135px;overflow-y:auto;border:1px solid #dbe9df;border-radius:16px;padding:16px;background:#f6faf7}.sd-assistant-bubble{max-width:87%;border-radius:15px;padding:12px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap}.sd-assistant-bubble.assistant{background:#fff;color:#27563c;border:1px solid #dfebe2;align-self:flex-start}.sd-assistant-bubble.user{background:#245f47;color:white;align-self:flex-end}.sd-assistant-bubble .sd-btn{display:block;margin-top:8px}.sd-assistant-prompts{display:flex;gap:7px;flex-wrap:wrap;margin:17px 0}.sd-assistant-prompts button{background:#eff6ed;color:#216447;border:1px solid #d3e7d5;border-radius:30px;padding:9px 11px;font-size:12px}.sd-assistant-entry{display:flex;gap:8px}.sd-assistant-entry input{flex:1;min-width:0;border:1px solid #c9ddd1;border-radius:10px;padding:12px}.sd-assistant-entry button,.sd-assistant-page .sd-btn.secondary{display:inline-flex;gap:7px;align-items:center;justify-content:center}.sd-assistant-page .sd-kpis{margin:16px 0}.sd-notification{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid #e2ebe4;padding:14px 0}.sd-notification p{font-size:13px;margin:4px 0;color:#567260}.sd-notification small{font-size:11px;color:#7e8f83}.sd-notification.read{opacity:.7}.sd-verification-result{display:flex;gap:12px;border:1px solid #d3dccd;background:#fff9ef;padding:17px;border-radius:14px;margin:20px 0}.sd-verification-result.matched{background:#eef9f1;border-color:#acdcb8}.sd-verification-result p{font-size:12px;color:#667d6d;margin:7px 0 0}.sg-compliance .sd-treasury-note{display:flex;gap:9px;align-items:flex-start}
-@media(max-width:520px){.sd-assistant-entry .sd-btn span{display:none}.sd-assistant-bubble{max-width:98%}.sd-top-actions{gap:4px}.sd-notification{align-items:flex-start;flex-direction:column}}
+
+/* Tester upgrade: status badges and accessible market listing actions */
+.sg-demo-status{display:block;margin-top:4px;font-size:10px;font-weight:700;color:#527366;line-height:1.4}
+.sg-demo-status.matched{background:#e7f5df;color:#205c32;border-radius:6px;padding:4px 6px;width:fit-content}
+.sg-registry-result{background:#f4f8f5;padding:13px;border:1px solid #d2e1d6;border-radius:12px;font-size:12px}
+.sg-registry-result.demo-match{background:#eaf5e4;border-color:#a9d3b4}.sg-registry-result.no-match{background:#fff8eb;border-color:#ead6b0}
+.sg-registry-result p{margin:6px 0;font-weight:500;color:#395648}.sg-registry-result small{color:#667c6e}
+.sd-businessbar span.sg-demo-status{font-size:10px}
+
+.sd-shortcuts svg,.sd-goals svg,.sd-bottom svg,.sd-nexticon svg{display:inline-block;vertical-align:middle;flex-shrink:0}
+.sd-mode{display:flex;align-items:center;gap:5px}
+.sd-goals button span,.sd-shortcuts button span,.sd-bottom button span{display:inline-flex;align-items:center;justify-content:center}
+.sd-goals button span{color:inherit}
+
+/* Account-linked onboarding: intentionally separate from a real CIPC submission. */
+.sd-registry-welcome{max-width:730px;margin:16px auto;background:#fff;border:1px solid #dfeae2;border-radius:20px;padding:clamp(20px,4vw,38px);box-shadow:0 8px 30px #173e3209}.sd-registry-welcome h1{font-size:clamp(25px,5vw,39px);margin:10px 0}.sd-registry-welcome>p{color:#5e796c;line-height:1.6;font-size:14px}.sd-registry-caution{border:1px solid #e7d6b4;border-radius:12px;background:#fff8e9;color:#865a1c;font-size:12px;line-height:1.6;padding:13px;margin:15px 0}.sd-registry-welcome .sd-form{max-width:none}.sd-registry-welcome .sd-btn{width:fit-content}
+.sg-readonly-details{background:#f4f9f4;border:1px solid #deebe1;padding:14px 17px;border-radius:14px;margin:14px 0}.sg-readonly-details p{margin:8px 0;font-size:14px;overflow-wrap:anywhere}
+
+/* Responsive Treasury document links: permit full document titles to wrap inside cards. */
+.sd-treasury .sd-catalog{min-width:0;}
+.sd-treasury .sd-catalogitem{min-width:0;max-width:100%;overflow:hidden;}
+.sd-treasury .sd-catalogitem h3,
+.sd-treasury .sd-catalogitem p,
+.sd-treasury .sd-catalogitem small{overflow-wrap:anywhere;word-break:normal;}
+.sd-treasury .sd-treasury-links{display:flex;flex-wrap:wrap;align-items:flex-start;gap:9px 13px;min-width:0;width:100%;}
+.sd-treasury .sd-treasury-links .sd-official-link{
+ display:inline-block;flex:0 1 auto;min-width:0;max-width:100%;
+ white-space:normal!important;overflow-wrap:anywhere;word-break:break-word;
+ line-height:1.5;text-decoration-thickness:1px;
+}
+.sd-businessbar .sg-demo-status{justify-self:start;margin:4px 0 5px;}

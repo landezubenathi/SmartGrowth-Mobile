@@ -1,0 +1,1 @@
+{"name":"smartgrowth-retired-firebase-seeder","private":true,"version":"1.7.0","scripts":{"seed":"node seed.cjs"}}

@@ -71,9 +71,14 @@ def init_auth():
     with auth_session() as db:
         # Seeded test accounts are OPT-IN for the local Windows demo only.
         if os.getenv('SMARTGROWTH_SEED_DEMO') == '1':
+            # Developer-only, explicit opt-in. Never ship a predictable demonstration password.
+            demo_password = os.getenv('SMARTGROWTH_DEMO_PASSWORD', '')
+            buyer_password = os.getenv('SMARTGROWTH_BUYER_PASSWORD', '')
+            if len(demo_password) < 10 or len(buyer_password) < 10:
+                raise RuntimeError('Set SMARTGROWTH_DEMO_PASSWORD and SMARTGROWTH_BUYER_PASSWORD (10+ characters each) for local seeding.')
             seeds = [
-                ('demo', 'demo@smartgrowth.local', 'Demo Entrepreneur', 'SmartDemo!2026'),
-                ('buyer', 'buyer@smartgrowth.local', 'Demo Buyer', 'BuyerDemo!2026'),
+                ('demo', 'demo@smartgrowth.local', 'Demo Entrepreneur', demo_password),
+                ('buyer', 'buyer@smartgrowth.local', 'Demo Buyer', buyer_password),
             ]
             for user_id, email, display_name, password in seeds:
                 if not db.execute('SELECT 1 FROM accounts WHERE email=?', (email,)).fetchone():

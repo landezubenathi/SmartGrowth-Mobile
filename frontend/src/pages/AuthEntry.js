@@ -48,7 +48,7 @@ export default function AuthEntry({onSignedIn,onStandaloneStart}) {
         <button type="button" onClick={()=>setEditServer(!editServer)}>⚙ {editServer?'Hide':'Backend connection'} settings</button>
         {editServer&&<form onSubmit={e=>{e.preventDefault();try{saveApiBase(server);setEditServer(false);setError('');}catch(err){setError(err.message);}}}><input aria-label="Backend URL" value={server} onChange={e=>setServer(e.target.value)} placeholder="http://localhost:8000"/><button type="submit">Save server</button></form>}
       </div>
-      <p className="sg-safe">Online account records are separate from the on-device demo. A server is required and the two modes do not automatically sync. Firebase is not configured in this package.</p>
+      <p className="sg-safe">Online account records are separate from the on-device demo. A server is required and the two modes do not automatically sync. Cloud account services are unavailable in this version.</p>
       </details>
     </section>
   </main>;

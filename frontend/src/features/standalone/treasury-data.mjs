@@ -10,7 +10,7 @@ export function treasuryURL(now=new Date(),lookback=30,page=1){
  const days=Math.min(90,Math.max(1,Number(lookback)||30));
  const to=new Date(now),from=new Date(to.getTime()-days*86400000);
  const ymd=d=>d.toISOString().slice(0,10);
- return `${TREASURY_API}?dateFrom=${ymd(from)}&dateTo=${ymd(to)}&PageNumber=${Math.max(1,Math.floor(Number(page)||1))}&PageSize=50`;
+ return `${TREASURY_API}?dateFrom=${ymd(from)}&dateTo=${ymd(to)}&PageNumber=${Math.max(1,Math.floor(Number(page)||1))}`;
 }
 function releaseArray(payload){
  if(Array.isArray(payload)) return payload;
@@ -37,9 +37,11 @@ export function normalizeReleases(payload, now=new Date()){
   const publication=String(release.date||row.date||'').slice(0,10);
   const buyer=String(release.buyer?.name||tender.procuringEntity?.name||row.buyer?.name||'Not specified').slice(0,180);
   const value=Number(tender.value?.amount);
+  const rawDocs=[...(Array.isArray(tender.documents)?tender.documents:[]),...(Array.isArray(release.documents)?release.documents:[])];
+  const documents=rawDocs.filter(d=>typeof d?.url==='string'&&/^https:\/\//i.test(d.url)).slice(0,8).map(d=>({title:String(d.title||d.documentType||'Tender document').slice(0,120),url:d.url}));
   const body=[title,tender.description||'',buyer,tender.mainProcurementCategory||'',(tender.items||[]).map(x=>x.description||'').join(' ')].join(' ').toLowerCase();
   const province=String(tender.deliveryAddress?.region||tender.procuringEntity?.address?.region||release.buyer?.address?.region||'').slice(0,80);
-  const safe={ocid:rawOcid,id:String(tender.id||'').slice(0,120),title,buyer,description:String(tender.description||'').slice(0,550),published:/^\d{4}-\d{2}-\d{2}$/.test(publication)?publication:null,closing:validClose,status,stage,province:province||null,category:String(tender.mainProcurementCategory||'').slice(0,60)||null,value:Number.isFinite(value)&&value>0?value:null,body:body.slice(0,2000),source: `${TREASURY_API}/release/${encodeURIComponent(rawOcid)}`};
+  const safe={ocid:rawOcid,id:String(tender.id||'').slice(0,120),title,buyer,description:String(tender.description||'').slice(0,550),published:/^\d{4}-\d{2}-\d{2}$/.test(publication)?publication:null,closing:validClose,status,stage,province:province||null,category:String(tender.mainProcurementCategory||'').slice(0,60)||null,value:Number.isFinite(value)&&value>0?value:null,body:body.slice(0,2000),documents,source: `${TREASURY_API}/release/${encodeURIComponent(rawOcid)}`};
   const existing=map.get(rawOcid);
   if(!existing||(safe.published||'')>=(existing.published||''))map.set(rawOcid,safe);
  }
