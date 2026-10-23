@@ -18,16 +18,16 @@ test('sole trader receives no blanket requirement to register a company',()=>{
  assert.equal(complianceDetails(b).items.some(x=>x.id==='cipc'),false);
  assert.equal(complianceDetails(b).items.some(x=>x.id==='sars'),true);
 });
-test('registered companies get CIPC step, suppliers get CSD step',()=>{
+test('registered businesses do not get a duplicate company registration step; suppliers get CSD step',()=>{
  let b=updateCompliance(blankBusiness('Acme','Construction','Eastern Cape'),{structure:'registered_company',governmentSupplier:true});
- assert.deepEqual(complianceDetails(b).items.map(x=>x.id),['structure','cipc','sars','csd']);
+ assert.deepEqual(complianceDetails(b).items.map(x=>x.id),['structure','sars','csd']);
 });
 test('user review is labelled self-reported; cannot change Passport verification score',()=>{
  let b=updateCompliance(blankBusiness('Acme','Retail','Gauteng'),{structure:'registered_company',cipcNumber:'2026/123456/07'});
  const before=passport(b).score;
  b=markPortalReviewed(b,'cipc','2026-10-20T18:00:00.000Z');
  assert.equal(b.compliance.checks.cipc.method,'self_reported_portal_review');
- assert.equal(complianceDetails(b).done,2);
+ assert.equal(complianceDetails(b).done,1); // A legacy company portal review no longer counts as a required step.
  assert.equal(passport(b).score,before);
  assert.ok(advice(b).items.some(x=>x.page==='compliance'));
 });

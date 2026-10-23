@@ -14,3 +14,13 @@
 .sg-local-card h3{font-size:15px;margin:0 0 10px;color:#174b38}
 .sg-local-card dl{margin:0;display:grid;gap:7px}.sg-local-card dl>div{display:grid;grid-template-columns:minmax(92px,34%) 1fr;gap:7px}
 .sg-local-card dt{font-size:12px;color:#668275}.sg-local-card dd{margin:0;font-size:12px;overflow-wrap:anywhere;color:#25493c}
+
+/* Registration notice and privacy consent */
+.sg-registration-notice{background:#f2f7f3;border:1px solid #d6e7da;border-radius:12px;padding:13px 15px;margin:14px 0 17px;line-height:1.55;font-size:13px;color:#245a43}
+.sg-registration-notice strong{display:block;font-size:13px;margin-bottom:4px}
+.sg-registration-notice p{margin:0;color:#496b59}
+.sg-registration-notice a{color:#195c47;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.sg-consent-line{display:flex!important;align-items:flex-start;gap:10px;line-height:1.5;font-size:13px;font-weight:600;color:#254b3c;margin:6px 0 2px;cursor:pointer}
+.sg-register-card .sg-consent-line input[type=checkbox]{width:18px;height:18px;min-width:18px;flex:0 0 18px;margin:2px 0 0;accent-color:#15714f}
+.sg-field-error{margin:0;color:#a6352c;font-size:12px;line-height:1.5}
+.sg-practice-number strong{overflow-wrap:anywhere}
