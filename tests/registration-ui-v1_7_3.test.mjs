@@ -18,6 +18,6 @@ test('ID and postal inputs reject mixed paste and request numeric mobile input',
  assert.match(view,/numericField\('postalCode',4/);
 });
 test('completion has concise SmartGrowth reference and no previous highlighted warning box',()=>{
- assert.match(view,/Your SmartGrowth registration reference · not issued by CIPC/);
+ assert.match(view,/SmartGrowth registration reference · not government-issued/);
  assert.doesNotMatch(view,/This is not a CIPC registration number\. No submission has been made to CIPC or BizPortal\./);
 });

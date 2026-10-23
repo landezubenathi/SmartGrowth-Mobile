@@ -34,7 +34,7 @@ export function makeOnboardedBusiness(data){
  const b=blankBusiness(data.name,data.industry,data.province,data.description);
  const now=new Date().toISOString();
  return {...b,registrySource:PRACTICE_SOURCE,registryId:b.id,registryStatus:'practice',
-  registrationDetails:{structure:data.structure,address:{street:data.street,city:data.city,province:data.province,postalCode:data.postalCode},directorName:data.directorName,reviewStatus:'format-checked-only',consent:{acceptedAt:now,noticeVersion:'1.7.3'}},
+  registrationDetails:{structure:data.structure,address:{street:data.street,city:data.city,province:data.province,postalCode:data.postalCode},directorName:data.directorName,reviewStatus:'format-checked-only',consent:{acceptedAt:now,noticeVersion:'1.7.4'}},
   compliance:{...b.compliance,structure:data.structure,cipcNumber:practiceRegistrationNumber(),checks:{}},
   modifiedAt:now,isPlaceholder:false};
 }
@@ -42,7 +42,7 @@ export const ONBOARDING_STEPS=[
  'Checking entered director ID format',
  'Reviewing the business name and address',
  'Preparing owner and business details',
- 'Simulating registration with a practice registry — no CIPC connection',
+ 'Preparing your SmartGrowth business registration record',
  'Generating a SmartGrowth practice reference',
  'Saving your private business workspace'
 ];

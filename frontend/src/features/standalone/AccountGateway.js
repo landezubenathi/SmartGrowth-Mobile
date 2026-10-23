@@ -50,18 +50,18 @@ export default function AccountGateway({configured=true,loading=false,onRegister
   {completedNumber ? <div className="sg-finish" role="status">
     <SmartIcon name="check" size={44}/><h1>Registration complete</h1>
     <p>Your business has been added to your SmartGrowth account. You can now sign in with the email and password you created.</p>
-    <div className="sg-practice-number"><small>Your SmartGrowth registration reference · not issued by CIPC</small><strong>{completedNumber}</strong></div>
+    <div className="sg-practice-number"><small>SmartGrowth registration reference · not government-issued</small><strong>{completedNumber}</strong></div>
     <button type="button" className="sd-btn" onClick={async()=>{try{await accountLogout();onFinishRegistration?.();setCompletedNumber('');setStep(-1);setRegister(false);}catch(e){setError(e.message);}}}>Continue to sign in</button>
   </div> : progress ? <section className="sg-register-progress" role="status" aria-live="polite">
-    <h1>Preparing your business</h1><p>SmartGrowth registration simulation</p>
+    <h1>Preparing your business</h1><p>Setting up your business workspace</p>
     <div className="sg-progress-track"><span style={{width:`${Math.min(100,((step+1)/ONBOARDING_STEPS.length)*100)}%`}}/></div>
     <div className="sg-progress-steps">{ONBOARDING_STEPS.map((s,i)=><div key={s} className={i<step?'done':i===step?'current':''}><SmartIcon name={i<step?'check':'shield'} size={17}/><span>{s}</span></div>)}</div>
-    <p className="sg-cipc-disclaimer">The steps above simulate a possible CIPC-connected journey. No government API or identity-verification service is contacted.</p>
+
   </section> : <>
    <h1>{loading?'Opening your workspace…':register?'Register your business':'Welcome to SmartGrowth'}</h1>
    <p>{register?'Create your account and enter your business information in one guided registration.':'Sign in to access your saved business information, finances and Journey.'}</p>
-   {register&&<section className="sg-registration-notice" aria-label="Registration and privacy information"><strong>Before you register</strong><p>SmartGrowth uses your contact and business details to create your account and save your workspace through Firebase. The registration process is simulated and does not submit information to CIPC. See <a href="https://www.cipc.co.za/" target="_blank" rel="noopener noreferrer">official CIPC guidance ↗</a> for legal registration requirements.</p></section>}
-   {loading?<p role="status">Checking your previous sign-in. Previously synced records may remain available offline.</p>:!configured?<div className="sd-error" role="alert">Firebase is not configured in this build. Ask the administrator to check the Firebase settings and rebuild.</div>:<>
+   {register&&<section className="sg-registration-notice" aria-label="Registration and privacy information"><strong>Before you register</strong><p>SmartGrowth uses your personal and business details to create your account and help you prepare for CIPC, SARS and other business-compliance requirements. We apply privacy and security safeguards guided by South Africa’s Protection of Personal Information Act (POPIA). We will not send your details to government departments unless an authorised process is available and you are informed.</p></section>}
+   {loading?<p role="status">Checking your previous sign-in. Previously synced records may remain available offline.</p>:!configured?<div className="sd-error" role="alert">Account services are temporarily unavailable. Please contact the SmartGrowth support team.</div>:<>
     <form className="sd-form" onSubmit={submit}>
      <label>Email address<input type="email" required autoComplete="email" value={draft.email} onChange={e=>change('email',e.target.value)} placeholder="you@example.com"/></label>
      <label>SmartGrowth password<input type="password" required minLength={register?8:6} autoComplete={register?'new-password':'current-password'} value={draft.password} onChange={e=>change('password',e.target.value)} placeholder={register?'Create a password (8+ characters)':'Your SmartGrowth password'}/></label>
@@ -75,10 +75,10 @@ export default function AccountGateway({configured=true,loading=false,onRegister
       <div className="sg-form-two"><label>Town / City<input value={draft.city} required maxLength={90} onChange={e=>change('city',e.target.value)} /></label><label>Postal code<input type="text" autoComplete="postal-code" value={draft.postalCode} required {...numericField('postalCode',4,'Postal code')}/></label></div>
       <div className="sg-form-divider">Owner / director details</div>
       <label>Owner or director's full name<input required maxLength={120} value={draft.directorName} onChange={e=>change('directorName',e.target.value)}/></label>
-      <label>South African ID number (format check only)<input required type="password" autoComplete="off" value={draft.directorId} {...numericField('directorId',13,'ID number')}/><small>We check its format locally. Your full ID number is not saved to Firestore, the registry or your business records.</small></label>
+      <label>South African ID number (format check only)<input required type="password" autoComplete="off" value={draft.directorId} {...numericField('directorId',13,'ID number')}/><small>Your ID number is checked for format only. The full number is not saved in your business profile.</small></label>
       <label>Brief business description<textarea rows={3} maxLength={400} value={draft.description} onChange={e=>change('description',e.target.value)} placeholder="What products or services will you offer?"/></label>
       {numericError&&<p className="sg-field-error" role="alert">{numericError}</p>}
-      <label className="sg-consent-line"><input type="checkbox" required checked={draft.consentAccepted} onChange={e=>change('consentAccepted',e.target.checked)}/><span>I agree to SmartGrowth using my information to create my account and business workspace as described above.</span></label>
+      <label className="sg-consent-line"><input type="checkbox" required checked={draft.consentAccepted} onChange={e=>change('consentAccepted',e.target.checked)}/><span>I understand and consent to SmartGrowth using my information for account creation, business-registration guidance and compliance support as described above.</span></label>
      </>}
      <button className="sd-btn" type="submit" disabled={busy}>{busy?'Processing…':register?'Register business':'Sign in'}</button>
     </form>
@@ -104,6 +104,6 @@ export default function AccountGateway({configured=true,loading=false,onRegister
    </>}
   </>}
   {error&&<div className="sd-error" role="alert">{error}</div>}{notice&&<div className="sd-notice" role="status">{notice}</div>}
-  <div className="sg-access-footer"><SmartIcon name="shield" size={16}/><p>SmartGrowth uses Firebase Authentication. Your password is not stored in the business registry or shared with CIPC.</p></div>
+  <div className="sg-access-footer"><SmartIcon name="shield" size={16}/><p>Your password is managed by our secure account service and is not stored in your business profile.</p></div>
  </main></div>;
 }

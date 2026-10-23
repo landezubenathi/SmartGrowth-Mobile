@@ -7,7 +7,7 @@ export default function SharedMarketplace({business,accountId,workspace,onSaveLi
  const [busy,setBusy]=useState(false),[search,setSearch]=useState('');
  const cloud=Boolean(accountId&&workspace==='cloud');
  useEffect(()=>{if(!cloud){setPosts([]);setStatus('Sign in to view shared listings. Local drafts remain private.');return;}
-  try{return watchPublicListings((items,meta)=>{setPosts(items);setStatus(meta.fromCache?'Showing saved listings. Reconnect for updates.':'Shared marketplace connected.');},e=>setStatus(`Marketplace connection: ${e.message}. Check the published Firestore rules.`));}
+  try{return watchPublicListings((items,meta)=>{setPosts(items);setStatus(meta.fromCache?'Showing saved listings. Reconnect for updates.':'Shared marketplace connected.');},e=>setStatus(`Marketplace connection: ${e.message}. If the problem continues, contact support.`));}
   catch(e){setStatus(e.message);}
  },[cloud,accountId]);
  const visible=useMemo(()=>posts.filter(p=>[p.name,p.description,p.businessName,p.industry,p.province].join(' ').toLowerCase().includes(search.toLowerCase())),[posts,search]);

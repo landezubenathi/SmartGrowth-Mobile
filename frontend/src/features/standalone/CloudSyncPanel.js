@@ -16,7 +16,7 @@ export default function CloudSyncPanel({user,status,workspace}){
  };
  return <section className="sd-panel sd-cloud" aria-label="Cloud account and offline sync">
   <div className="sd-panelhead"><h2><SmartIcon name="cloud" size={20}/> Account & sync</h2><p>Your records are saved locally and sync automatically when your connection returns.</p></div>
-  {!firebaseConfigured?<div className="sd-treasury-note" role="status"><b>Cloud sync has not been activated by Four Horsemen Tech.</b><p>The app still works offline with local data. Configure Firebase using <code>docs/FIREBASE_SETUP.md</code>, then rebuild the APK. No local FastAPI server is required.</p></div>:null}
+  {!firebaseConfigured?<div className="sd-treasury-note" role="status"><b>Cloud sync has not been activated by Four Horsemen Tech.</b><p>Your saved business information is still available offline. Please contact SmartGrowth support to activate account synchronisation.</p></div>:null}
   {firebaseConfigured&&!user?<>
    <p className="sd-muted">Sign in once to keep your business records connected across your devices. You can continue using saved records offline.</p>
    <form className="sd-form" onSubmit={submit}>

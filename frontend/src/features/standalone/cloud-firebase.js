@@ -27,26 +27,26 @@ export function getCloud(){
  const auth=getAuth(app);
  let db;
  try { db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})}); }
- catch(e){if(e.code==='failed-precondition'){throw Error('Firestore is already configured differently; restart the app.');}throw e;}
+ catch(e){if(e.code==='failed-precondition'){throw Error('Your saved account data needs a restart to reconnect.');}throw e;}
  services={auth,db};return services;
 }
 export function observeLogin(onUser){const svc=getCloud();return svc?onAuthStateChanged(svc.auth,onUser):()=>{};}
 export async function accountLogin(email,password,register=false){
- const svc=getCloud();if(!svc)throw Error('Cloud sign-in is not configured yet. Set up Firebase first.');
+ const svc=getCloud();if(!svc)throw Error('Account services are not available. Please contact support.');
  await setPersistence(svc.auth,browserLocalPersistence);
  return (register?createUserWithEmailAndPassword:signInWithEmailAndPassword)(svc.auth,email.trim(),password);
 }
 export async function accountLogout(){const svc=getCloud();if(svc)await signOut(svc.auth);}
-export async function resetPassword(email){const svc=getCloud();if(!svc)throw Error('Firebase is not configured.');return sendPasswordResetEmail(svc.auth,email.trim());}
+export async function resetPassword(email){const svc=getCloud();if(!svc)throw Error('Account services are not available. Please contact support.');return sendPasswordResetEmail(svc.auth,email.trim());}
 export function watchBusinesses(uid,callback,fail){
- const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ const svc=getCloud();if(!svc)throw Error('Account services are not available. Please contact support.');
  return onSnapshot(collection(svc.db,'users',uid,'businesses'),{includeMetadataChanges:true},snapshot=>{
   callback(snapshot.docs.map(d=>d.data().payload).filter(Boolean),{fromCache:snapshot.metadata.fromCache,hasPendingWrites:snapshot.metadata.hasPendingWrites});
  },fail);
 }
 export async function uploadBusiness(uid,b){
- if(isDeviceOnlySample(b))throw Error('Bundled practice profiles are device-only and cannot be uploaded to a Firebase account.');
- const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ if(isDeviceOnlySample(b))throw Error('Example business profiles are view-only and cannot be linked to your account.');
+ const svc=getCloud();if(!svc)throw Error('Account services are not available. Please contact support.');
  const payload=JSON.parse(JSON.stringify(b));
  if(JSON.stringify(payload).length>700000)throw Error('Business record exceeds the 700 KB sync limit. Export a backup.');
  return setDoc(doc(svc.db,'users',uid,'businesses',b.id),{payload,ownerUid:uid,modifiedAt:b.modifiedAt||b.createdAt||''});
@@ -54,13 +54,13 @@ export async function uploadBusiness(uid,b){
 
 // Account-owned fictional registry. Never stores passwords or real CIPC credentials.
 export function watchPracticeRegistry(uid,callback,fail){
- const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ const svc=getCloud();if(!svc)throw Error('Account services are not available. Please contact support.');
  return onSnapshot(collection(svc.db,'users',uid,'simulatedRegistry'),{includeMetadataChanges:true},snapshot=>{
   callback(snapshot.docs.map(d=>d.data()).filter(d=>d.source==='smartgrowth-simulated-registry'),{fromCache:snapshot.metadata.fromCache,hasPendingWrites:snapshot.metadata.hasPendingWrites});
  },fail);
 }
 export function createPracticeRegistryRecord(uid,record){
- const svc=getCloud();if(!svc)throw Error('Firebase is not configured');
+ const svc=getCloud();if(!svc)throw Error('Account services are not available. Please contact support.');
  if(record.ownerUid!==uid||record.businessId?.length>150||record.source!=='smartgrowth-simulated-registry'||record.status!=='practice')throw Error('Invalid simulated registry record');
  return setDoc(doc(svc.db,'users',uid,'simulatedRegistry',record.businessId),record);
 }

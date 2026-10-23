@@ -29,9 +29,10 @@ test('onboarding business saves owner name and address, never password or raw ID
  assert.ok(!JSON.stringify(registry).includes(input.directorId));
  assert.ok(!JSON.stringify(registry).includes(input.password));
 });
-test('registration animation clearly discloses the simulated government step',()=>{
+test('registration progress is presented as SmartGrowth onboarding without claiming a government API',()=>{
  assert.ok(ONBOARDING_STEPS.length>=5);
- assert.ok(ONBOARDING_STEPS.some(s=>s.includes('no CIPC connection')));
+ assert.ok(ONBOARDING_STEPS.some(s=>s.includes('SmartGrowth business registration record')));
+ assert.ok(!ONBOARDING_STEPS.some(s=>s.includes('submitted to CIPC')||s.includes('CIPC verified')));
 });
 
 test('numeric entries reject pasted letters, spaces and overly long values',()=>{
@@ -48,6 +49,6 @@ test('business registration requires consent and records time without storing di
  assert.throws(()=>validateOnboarding({...input,consentAccepted:false}),/agree to SmartGrowth/i);
  const b=makeOnboardedBusiness(validateOnboarding(input));
  assert.ok(b.registrationDetails.consent.acceptedAt);
- assert.equal(b.registrationDetails.consent.noticeVersion,'1.7.3');
+ assert.equal(b.registrationDetails.consent.noticeVersion,'1.7.4');
  assert.ok(!JSON.stringify(b).includes(input.directorId));
 });
