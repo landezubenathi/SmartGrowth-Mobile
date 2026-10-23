@@ -56,3 +56,24 @@
  line-height:1.5;text-decoration-thickness:1px;
 }
 .sd-businessbar .sg-demo-status{justify-self:start;margin:4px 0 5px;}
+
+/* Private buyer/seller engagement in Market Links. Keep controls touch-friendly. */
+.sg-offer-card{min-width:0;overflow-wrap:anywhere}
+.sg-market-ctas{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:12px}
+.sg-market-ctas .sd-btn{min-height:42px;white-space:normal;overflow-wrap:anywhere;max-width:100%;font-size:12px}
+.sg-market-contact{display:grid;gap:12px;padding:15px;margin-top:16px;background:#fff;border:1px solid #d0e2d6;border-radius:13px}
+.sg-market-contact h4{margin:0;color:#154a33;font-size:15px}
+.sg-market-contact p{font-size:12px;margin:0}
+.sg-market-contact label:not(.sg-market-consent){display:grid;gap:5px;font-size:12px;color:#28543f;font-weight:700}
+.sg-market-contact input:not([type=checkbox]),.sg-market-contact textarea{box-sizing:border-box;width:100%;font-size:14px;padding:11px;border:1px solid #cadbd0;border-radius:9px;min-width:0}
+.sg-market-consent{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.5;font-weight:500}
+.sg-market-consent input{margin-top:3px;flex-shrink:0}
+.sg-market-tag{display:inline-flex;align-items:center;gap:5px;background:#e9f5ec;color:#22684a;padding:6px 9px;border-radius:99px;font-weight:700;font-size:11px}
+.sg-market-count{display:inline-block;padding:4px 8px;border-radius:99px;background:#ddf1e4;color:#136740;font-size:11px;vertical-align:middle}
+.sg-market-lead{border:1px solid #dfe9e1;background:#fafcf9;border-radius:12px;padding:15px;margin-bottom:12px;overflow-wrap:anywhere;font-size:13px}
+.sg-market-leadhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center}
+.sg-market-lead p{line-height:1.5;margin:10px 0}
+.sg-market-lead small{font-size:11px;color:#627e6d}
+.sg-market-message{white-space:pre-wrap;background:#f1f7f2;border-radius:9px;padding:10px}
+.sg-market-lead a{color:#166747;overflow-wrap:anywhere}
+@media(max-width:650px){.sg-market-ctas .sd-btn{flex:1 1 140px}.sg-market-contact{padding:12px}}

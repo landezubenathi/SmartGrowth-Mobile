@@ -79,6 +79,64 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
     }
 
+    // Private enquiries: senders explicitly share contact details with the
+    // owner of a real published listing. Never expose personal contact
+    // information through /marketplace or to other marketplace browsers.
+    function validMarketEnquiry(enquiryId) {
+      let d = request.resource.data;
+      let offerPath = /databases/$(database)/documents/marketplace/$(d.offerId);
+      let senderBusinessPath = /databases/$(database)/documents/users/$(request.auth.uid)/businesses/$(d.senderBusinessId);
+      return request.auth != null
+        && d.keys().hasAll(['offerId','ownerUid','ownerBusinessId','offerName',
+           'senderUid','senderBusinessId','senderBusinessName','senderIndustry',
+           'senderProvince','senderName','senderEmail','senderPhone','message',
+           'intent','status','createdAt','updatedAt'])
+        && d.keys().hasOnly(['offerId','ownerUid','ownerBusinessId','offerName',
+           'senderUid','senderBusinessId','senderBusinessName','senderIndustry',
+           'senderProvince','senderName','senderEmail','senderPhone','message',
+           'intent','status','createdAt','updatedAt'])
+        && d.offerId is string && d.offerId.matches('^offer_[A-Za-z0-9_]+$')
+        && d.senderUid == request.auth.uid
+        && enquiryId == 'interest_' + d.offerId + '_' + request.auth.uid
+        && d.ownerUid is string && d.ownerUid != request.auth.uid
+        && d.ownerBusinessId is string && d.ownerBusinessId.size() <= 150
+        && d.senderBusinessId is string && d.senderBusinessId.size() <= 150
+        && d.senderBusinessName is string && d.senderBusinessName.size() > 0 && d.senderBusinessName.size() <= 90
+        && d.senderIndustry is string && d.senderIndustry.size() <= 80
+        && d.senderProvince is string && d.senderProvince.size() <= 80
+        && d.senderName is string && d.senderName.size() >= 2 && d.senderName.size() <= 100
+        && d.senderEmail == request.auth.token.email
+        && d.senderPhone is string && d.senderPhone.size() <= 30
+        && d.message is string && d.message.size() >= 10 && d.message.size() <= 1000
+        && d.intent in ['interest', 'quotation']
+        && d.status == 'new'
+        && d.createdAt is string && d.updatedAt is string
+        && exists(offerPath)
+        && get(offerPath).data.status == 'published'
+        && get(offerPath).data.ownerUid == d.ownerUid
+        && get(offerPath).data.businessId == d.ownerBusinessId
+        && get(offerPath).data.name == d.offerName
+        && exists(senderBusinessPath)
+        && get(senderBusinessPath).data.ownerUid == request.auth.uid
+        && get(senderBusinessPath).data.payload.name == d.senderBusinessName;
+    }
+    match /marketEnquiries/{enquiryId} {
+      // Caller must query by ownerUid or senderUid. Other users cannot
+      // enumerate the collection or see enquiry contact details.
+      allow get, list: if request.auth != null &&
+        (resource.data.ownerUid == request.auth.uid ||
+         resource.data.senderUid == request.auth.uid);
+      allow create: if validMarketEnquiry(enquiryId);
+      allow update: if request.auth != null
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+        && request.resource.data.status in ['contacted','closed']
+        && request.resource.data.updatedAt is string;
+      allow delete: if request.auth != null &&
+        (resource.data.ownerUid == request.auth.uid ||
+         resource.data.senderUid == request.auth.uid);
+    }
+
     // All other paths remain denied.
     match /{document=**} {
       allow read, write: if false;

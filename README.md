@@ -1,3 +1,5 @@
+> **v1.7.5 update:** Market Links supports private buyer enquiries and quotation requests, with an owner inbox and sender status tracking. Deploy updated Firestore rules before using it. See [Market Engagement Guide](docs/SMARTGROWTH_V1_7_5_MARKET_ENGAGEMENT.md).
+
 # SmartGrowth v1.7 — Three Local Practice Profiles
 
 SmartGrowth is a mobile-first React + Capacitor app with Firebase sign-in, offline business records, and Firestore sync. Version 1.7 preserves the v1.6 guided registration and account-owned practice registry, while providing only three complete, device-bundled sample profiles. No Firebase demo accounts are seeded. There is no live CIPC integration.
