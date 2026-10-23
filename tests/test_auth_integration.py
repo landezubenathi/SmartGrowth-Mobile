@@ -1,4 +1,4 @@
-"""Run with: SMARTGROWTH_SEED_DEMO=1 python -m pytest -q tests/test_auth_integration.py"""
+"""Run with: python -m pytest -q tests/test_auth_integration.py (fixtures set test-only credentials)."""
 import os
 import sys
 import tempfile
@@ -18,6 +18,8 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(growth_modules, 'DB', db)
     monkeypatch.setattr(auth, 'DB', db)
     monkeypatch.setenv('SMARTGROWTH_SEED_DEMO', '1')
+    monkeypatch.setenv('SMARTGROWTH_DEMO_PASSWORD', 'TestOnlyDemoPassword_2026!')
+    monkeypatch.setenv('SMARTGROWTH_BUYER_PASSWORD', 'TestOnlyBuyerPassword_2026!')
     with TestClient(app) as client:
         yield client
 
@@ -34,8 +36,8 @@ def headers(s): return {'Authorization':'Bearer '+s['token']}
 def test_auth_sessions_and_account_isolation(api):
     assert api.get('/health').status_code==200
     assert api.get('/api/growth/transactions/demo').status_code==401
-    demo=login(api,'demo@smartgrowth.local','SmartDemo!2026')
-    buyer=login(api,'buyer@smartgrowth.local','BuyerDemo!2026')
+    demo=login(api,'demo@smartgrowth.local','TestOnlyDemoPassword_2026!')
+    buyer=login(api,'buyer@smartgrowth.local','TestOnlyBuyerPassword_2026!')
     assert demo['account']['user_id']=='demo'
     assert buyer['account']['user_id']=='buyer'
     assert api.get('/api/auth/me',headers=headers(demo)).json()['account']['user_id']=='demo'

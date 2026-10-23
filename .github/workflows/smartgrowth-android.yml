@@ -17,6 +17,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -27,6 +29,20 @@ jobs:
       - name: Install npm dependencies
         working-directory: frontend
         run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Produce npm dependency security audit
+        working-directory: frontend
+        shell: bash
+        run: |
+          # This is informational until reviewed: vulnerabilities in legacy
+          # react-scripts should not silently prevent the demo APK build.
+          npm audit --json > npm-audit-security.json || true
+      - name: Upload npm audit for security review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartgrowth-npm-security-audit
+          path: frontend/npm-audit-security.json
+          if-no-files-found: ignore
       - name: Validate standalone calculations
         shell: bash
         run: |
