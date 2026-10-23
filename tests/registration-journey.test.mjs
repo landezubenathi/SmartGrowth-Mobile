@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateOnboarding,makeOnboardedBusiness,ONBOARDING_STEPS} from '../frontend/src/features/standalone/onboarding.mjs';
+import {validateOnboarding,makeOnboardedBusiness,ONBOARDING_STEPS,acceptedNumericEntry} from '../frontend/src/features/standalone/onboarding.mjs';
 import {registrationFromBusiness,PRACTICE_SOURCE} from '../frontend/src/features/standalone/mock-registry.mjs';
-const input={email:'founder@example.org',password:'LongDemoPass!2026',businessName:'Rural Fresh Produce',structure:'registered_company',industry:'Agriculture',province:'Eastern Cape',street:'19 Main Road',city:'Mthatha',postalCode:'5099',directorName:'Sample Owner',directorId:'8001015009087',description:'Fresh produce and delivery'};
+const input={email:'founder@example.org',password:'LongDemoPass!2026',businessName:'Rural Fresh Produce',structure:'registered_company',industry:'Agriculture',province:'Eastern Cape',street:'19 Main Road',city:'Mthatha',postalCode:'5099',directorName:'Sample Owner',directorId:'8001015009087',description:'Fresh produce and delivery',consentAccepted:true};
 // SA ID format field is NEVER identity verification.
 test('registration requires all business and director details',()=>{
  assert.throws(()=>validateOnboarding({...input,businessName:'A'}),/business name/i);
@@ -32,4 +32,22 @@ test('onboarding business saves owner name and address, never password or raw ID
 test('registration animation clearly discloses the simulated government step',()=>{
  assert.ok(ONBOARDING_STEPS.length>=5);
  assert.ok(ONBOARDING_STEPS.some(s=>s.includes('no CIPC connection')));
+});
+
+test('numeric entries reject pasted letters, spaces and overly long values',()=>{
+ assert.equal(acceptedNumericEntry('1234',4),'1234');
+ assert.equal(acceptedNumericEntry('8001015009087',13),'8001015009087');
+ assert.equal(acceptedNumericEntry('12ab',4),null);
+ assert.equal(acceptedNumericEntry('12 4',4),null);
+ assert.equal(acceptedNumericEntry('12345',4),null);
+ assert.equal(acceptedNumericEntry('800101500908x',13),null);
+ assert.throws(()=>validateOnboarding({...input,postalCode:'12ab'}),/four-digit postal code/i);
+ assert.throws(()=>validateOnboarding({...input,directorId:'800101500908x'}),/ID format/i);
+});
+test('business registration requires consent and records time without storing director ID',()=>{
+ assert.throws(()=>validateOnboarding({...input,consentAccepted:false}),/agree to SmartGrowth/i);
+ const b=makeOnboardedBusiness(validateOnboarding(input));
+ assert.ok(b.registrationDetails.consent.acceptedAt);
+ assert.equal(b.registrationDetails.consent.noticeVersion,'1.7.3');
+ assert.ok(!JSON.stringify(b).includes(input.directorId));
 });
